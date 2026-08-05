@@ -1,0 +1,74 @@
+@import "tailwindcss";
+
+:root {
+  --ink: #16233a;
+  --ink-soft: #223250;
+  --bg: #f3f4f1;
+  --surface: #ffffff;
+  --border: #dde0d8;
+  --text: #16202b;
+  --muted: #64707a;
+  --accent: #c8722e;
+  --accent-soft: #f4e2d1;
+  --fast: #1e7a5f;
+  --fast-soft: #e0f0ea;
+  --slow: #c98a1b;
+  --slow-soft: #faedd3;
+  --dead: #b4402c;
+  --dead-soft: #f7e0da;
+
+  --font-display: "Oswald", "Arial Narrow", sans-serif;
+  --font-body: "Inter", Arial, Helvetica, sans-serif;
+  --font-mono: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+}
+
+@theme inline {
+  --color-ink: var(--ink);
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-border: var(--border);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-fast: var(--fast);
+  --color-slow: var(--slow);
+  --color-dead: var(--dead);
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+  --font-mono: var(--font-mono);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+}
+
+::selection {
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+
+/* Scrollbar tuned to the ink palette, quietly */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+::-webkit-scrollbar-thumb {
+  background: #c7cbc1;
+  border-radius: 6px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #a9aea1;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
