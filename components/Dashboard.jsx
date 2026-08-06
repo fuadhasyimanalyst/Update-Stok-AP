@@ -1,11 +1,15 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Image from "next/image";
 import * as XLSX from "xlsx";
+import { Package, Layers, Zap, Clock, AlertTriangle, Tag, ArrowUp } from "lucide-react";
 import StatCard from "./StatCard";
-import CategoryBadge from "./CategoryBadge";
+import CategoryBadge, { CATEGORY_STYLES } from "./CategoryBadge";
 import DepoHealthBars from "./DepoHealthBars";
+import QtyPerDepoChart from "./QtyPerDepoChart";
+import FilterBar from "./FilterBar";
+import TopBar from "./TopBar";
+import ScrollToTopButton from "./ScrollToTopButton";
 
 const PAGE_SIZE = 50;
 
@@ -15,6 +19,11 @@ function uniqueSorted(values) {
 
 function formatQty(n) {
   return new Intl.NumberFormat("id-ID").format(n);
+}
+
+function categoryColor(value) {
+  const style = CATEGORY_STYLES[value] || CATEGORY_STYLES["-"];
+  return style.fg;
 }
 
 export default function Dashboard({ rows, asOfDate, generatedAt }) {
@@ -39,7 +48,7 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
   );
 
   const filteredByPanel = useMemo(() => {
-    // filters excluding depo (used to compute per-depo health bars honoring other filters)
+    // filters excluding depo (used to compute per-depo health bars & qty chart honoring other filters)
     const q = search.trim().toLowerCase();
     return rows.filter((r) => {
       if (supp && r.SUPP !== supp) return false;
@@ -102,6 +111,16 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
     return Array.from(map.values()).sort((a, b) => a.depo.localeCompare(b.depo));
   }, [filteredByPanel]);
 
+  const depoQty = useMemo(() => {
+    const map = new Map();
+    for (const r of filteredByPanel) {
+      map.set(r.DEPO, (map.get(r.DEPO) || 0) + r.QTY);
+    }
+    return Array.from(map.entries())
+      .map(([depoName, qty]) => ({ depo: depoName, qty }))
+      .sort((a, b) => b.qty - a.qty);
+  }, [filteredByPanel]);
+
   function toggleSort(key) {
     if (sortKey === key) {
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -146,6 +165,7 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
       r.KATEGORI === "DEAD" ? "Dead Stock" : r.KATEGORI,
       r.BARANG_PROMO === "YA" ? "Promo" : "Non Promo",
     ]);
+    body.push(["", "GRAND TOTAL", "", stats.totalQty, "", "", "", "", ""]);
 
     const worksheet = XLSX.utils.aoa_to_sheet([headers, ...body]);
 
@@ -159,7 +179,7 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
     });
 
     // Aktifkan autofilter di baris header supaya bisa langsung difilter/disortir di Excel
-    worksheet["!autofilter"] = { ref: worksheet["!ref"] };
+    worksheet["!autofilter"] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: body.length - 1, c: headers.length - 1 } }) };
 
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Update Stok");
@@ -184,83 +204,44 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
 
   return (
     <div className="min-h-screen bg-[var(--bg)]">
-      <header className="bg-[var(--ink)] text-white">
-        <div className="mx-auto max-w-[1400px] px-5 py-4 flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-3">
-            <Image src="/logo.svg" alt="Logo" width={44} height={44} className="rounded-lg" />
-            <div>
-              <h1 className="font-[family-name:var(--font-display)] text-xl tracking-wide leading-none">
-                UPDATE STOK
-              </h1>
-              <p className="text-xs text-white/60 mt-1">
-                Dashboard stok multi-depo &middot; Fast / Slow Moving &amp; Dead Stock
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 text-xs">
-            <span className="rounded-full bg-white/10 px-3 py-1.5 font-medium tabular">
-              Data per: {asOfDate || "—"}
-            </span>
-          </div>
-        </div>
-      </header>
+      <TopBar asOfDate={asOfDate} onExport={exportExcel} />
 
-      <main className="mx-auto max-w-[1400px] px-5 py-6 flex flex-col gap-5">
+      <main className="px-4 sm:px-6 py-6 flex flex-col gap-5 max-w-[1600px] mx-auto">
         {/* Stat cards */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          <StatCard label="Total SKU" value={formatQty(filtered.length)} />
-          <StatCard label="Total Qty" value={formatQty(stats.totalQty)} />
-          <StatCard label="Fast Moving" value={formatQty(stats.fast)} accentColor="var(--fast)" />
-          <StatCard label="Slow Moving" value={formatQty(stats.slow)} accentColor="var(--slow)" />
-          <StatCard label="Dead Stock" value={formatQty(stats.dead)} accentColor="var(--dead)" />
-          <StatCard label="Barang Promo" value={formatQty(stats.promo)} accentColor="var(--accent)" />
+          <StatCard label="Total SKU" value={formatQty(filtered.length)} icon={Package} accentColor="var(--blue)" />
+          <StatCard label="Total Qty" value={formatQty(stats.totalQty)} icon={Layers} accentColor="var(--ink)" />
+          <StatCard label="Fast Moving" value={formatQty(stats.fast)} icon={Zap} accentColor="var(--fast)" />
+          <StatCard label="Slow Moving" value={formatQty(stats.slow)} icon={Clock} accentColor="var(--slow)" />
+          <StatCard label="Dead Stock" value={formatQty(stats.dead)} icon={AlertTriangle} accentColor="var(--dead)" />
+          <StatCard label="Barang Promo" value={formatQty(stats.promo)} icon={Tag} accentColor="var(--violet)" />
         </div>
+
+        {/* Qty per Depo bar chart */}
+        <QtyPerDepoChart data={depoQty} onDepoClick={setDepo} activeDepo={depo} />
 
         {/* Signature health bars */}
         <DepoHealthBars depoStats={depoStats} onDepoClick={setDepo} activeDepo={depo} />
 
-        {/* Filter toolbar */}
-        <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-3 flex flex-wrap items-center gap-2.5">
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-            placeholder="Cari nama / kode barang..."
-            className="flex-1 min-w-[200px] rounded-md border border-[var(--border)] px-3 py-1.5 text-sm outline-none focus:border-[var(--accent)] transition-colors"
+        {/* Table with filters on top */}
+        <div className="card overflow-hidden">
+          <FilterBar
+            options={options}
+            search={search}
+            setSearch={(v) => { setSearch(v); setPage(1); }}
+            depo={depo}
+            setDepo={(v) => { setDepo(v); setPage(1); }}
+            supp={supp}
+            setSupp={(v) => { setSupp(v); setPage(1); }}
+            kategori={kategori}
+            setKategori={(v) => { setKategori(v); setPage(1); }}
+            gudang={gudang}
+            setGudang={(v) => { setGudang(v); setPage(1); }}
+            promo={promo}
+            setPromo={(v) => { setPromo(v); setPage(1); }}
+            onReset={resetFilters}
           />
 
-          <Select value={depo} onChange={(v) => { setDepo(v); setPage(1); }} options={options.depo} placeholder="Semua Depo" />
-          <Select value={supp} onChange={(v) => { setSupp(v); setPage(1); }} options={options.supp} placeholder="Semua Supplier" />
-          <Select value={kategori} onChange={(v) => { setKategori(v); setPage(1); }} options={options.kategori} placeholder="Semua Kategori" labelMap={{ DEAD: "Dead Stock", "-": "Belum Dikategorikan" }} />
-          <Select value={gudang} onChange={(v) => { setGudang(v); setPage(1); }} options={options.gudang} placeholder="Semua Gudang" />
-
-          <Select
-            value={promo}
-            onChange={(v) => { setPromo(v); setPage(1); }}
-            options={["YA", "TIDAK"]}
-            placeholder="Semua (Promo & Non Promo)"
-            labelMap={{ YA: "Barang Promo", TIDAK: "Barang Non Promo" }}
-          />
-
-          <button
-            onClick={resetFilters}
-            className="text-sm px-3 py-1.5 rounded-md border border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)] hover:border-[var(--muted)] transition-colors"
-          >
-            Reset
-          </button>
-          <button
-            onClick={exportExcel}
-            className="text-sm px-3 py-1.5 rounded-md bg-[var(--ink)] text-white hover:bg-[var(--ink-soft)] transition-colors"
-          >
-            Export Excel
-          </button>
-        </div>
-
-        {/* Table */}
-        <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm border-collapse">
               <thead>
@@ -280,38 +261,48 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
                 </tr>
               </thead>
               <tbody>
-                {pageRows.map((r, i) => (
-                  <tr
-                    key={r.id}
-                    className={`border-b border-[var(--border)] last:border-0 ${
-                      i % 2 === 1 ? "bg-[var(--bg)]/40" : ""
-                    } hover:bg-[var(--accent-soft)]/40 transition-colors`}
-                  >
-                    <td className="px-3 py-2 font-[family-name:var(--font-mono)] text-xs whitespace-nowrap">
-                      {r.KODE_BARANG}
-                    </td>
-                    <td className="px-3 py-2 max-w-[320px] truncate" title={r.NAMA_BARANG}>
-                      {r.NAMA_BARANG}
-                    </td>
-                    <td className="px-3 py-2 whitespace-nowrap">{r.SATUAN}</td>
-                    <td className="px-3 py-2 text-right font-[family-name:var(--font-mono)] tabular whitespace-nowrap">
-                      {formatQty(r.QTY)}
-                    </td>
-                    <td className="px-3 py-2 whitespace-nowrap">{r.GUDANG}</td>
-                    <td className="px-3 py-2 whitespace-nowrap font-medium">{r.DEPO}</td>
-                    <td className="px-3 py-2 whitespace-nowrap">{r.SUPP}</td>
-                    <td className="px-3 py-2 whitespace-nowrap">
-                      <CategoryBadge value={r.KATEGORI} />
-                    </td>
-                    <td className="px-3 py-2 whitespace-nowrap">
-                      {r.BARANG_PROMO === "YA" ? (
-                        <span className="text-[var(--accent)] font-semibold text-xs">● PROMO</span>
-                      ) : (
-                        <span className="text-[var(--muted)] text-xs">—</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                {pageRows.map((r, i) => {
+                  const color = categoryColor(r.KATEGORI);
+                  return (
+                    <tr
+                      key={r.id}
+                      className={`border-b border-[var(--border)] last:border-0 ${
+                        i % 2 === 1 ? "bg-[var(--bg)]/40" : ""
+                      } hover:bg-[var(--accent-soft)]/40 transition-colors`}
+                    >
+                      <td
+                        className="px-3 py-2 font-[family-name:var(--font-mono)] text-xs whitespace-nowrap font-semibold"
+                        style={{ color }}
+                      >
+                        {r.KODE_BARANG}
+                      </td>
+                      <td
+                        className="px-3 py-2 max-w-[320px] truncate font-medium"
+                        style={{ color }}
+                        title={r.NAMA_BARANG}
+                      >
+                        {r.NAMA_BARANG}
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap">{r.SATUAN}</td>
+                      <td className="px-3 py-2 text-right font-[family-name:var(--font-mono)] tabular whitespace-nowrap">
+                        {formatQty(r.QTY)}
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap">{r.GUDANG}</td>
+                      <td className="px-3 py-2 whitespace-nowrap font-medium">{r.DEPO}</td>
+                      <td className="px-3 py-2 whitespace-nowrap">{r.SUPP}</td>
+                      <td className="px-3 py-2 whitespace-nowrap">
+                        <CategoryBadge value={r.KATEGORI} />
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap">
+                        {r.BARANG_PROMO === "YA" ? (
+                          <span className="text-[var(--accent)] font-semibold text-xs">● PROMO</span>
+                        ) : (
+                          <span className="text-[var(--muted)] text-xs">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
                 {pageRows.length === 0 && (
                   <tr>
                     <td colSpan={columns.length} className="px-3 py-10 text-center text-[var(--muted)] text-sm">
@@ -320,6 +311,19 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
                   </tr>
                 )}
               </tbody>
+              {pageRows.length > 0 && (
+                <tfoot>
+                  <tr className="border-t-2 border-[var(--border)] bg-[var(--bg)] font-bold">
+                    <td colSpan={3} className="px-3 py-2.5 text-xs uppercase tracking-wider text-[var(--ink)]">
+                      Grand Total ({formatQty(sorted.length)} SKU)
+                    </td>
+                    <td className="px-3 py-2.5 text-right font-[family-name:var(--font-mono)] tabular text-[var(--ink)] whitespace-nowrap">
+                      {formatQty(stats.totalQty)}
+                    </td>
+                    <td colSpan={5} className="px-3 py-2.5" />
+                  </tr>
+                </tfoot>
+              )}
             </table>
           </div>
 
@@ -352,28 +356,21 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
           </div>
         </div>
 
-        <footer className="text-center text-xs text-[var(--muted)] pb-4">
-          Data diproses dari SaldoStock.xls, SUPPLIER.xlsx &amp; KATEGORI_BARANG.xlsx &middot; dibuat{" "}
-          {new Date(generatedAt).toLocaleString("id-ID")}
+        <footer className="text-center text-xs text-[var(--muted)] pb-4 flex flex-col items-center gap-3">
+          <span>
+            Data diproses dari SaldoStock.xls, SUPPLIER.xlsx &amp; KATEGORI_BARANG.xlsx &middot; dibuat{" "}
+            {new Date(generatedAt).toLocaleString("id-ID")}
+          </span>
+          <button
+            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold border border-[var(--border)] text-[var(--blue)] hover:bg-[var(--blue-soft)] hover:border-[var(--blue)] transition-colors"
+          >
+            <ArrowUp size={14} /> Kembali ke Atas
+          </button>
         </footer>
       </main>
-    </div>
-  );
-}
 
-function Select({ value, onChange, options, placeholder, labelMap = {} }) {
-  return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="rounded-md border border-[var(--border)] px-2.5 py-1.5 text-sm bg-white outline-none focus:border-[var(--accent)] transition-colors"
-    >
-      <option value="">{placeholder}</option>
-      {options.map((o) => (
-        <option key={o} value={o}>
-          {labelMap[o] || o}
-        </option>
-      ))}
-    </select>
+      <ScrollToTopButton />
+    </div>
   );
 }

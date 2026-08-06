@@ -1,15 +1,40 @@
+/* Plus Jakarta Sans — same family as the reference (ap-sales) dashboard */
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap");
 @import "tailwindcss";
 
 :root {
-  --ink: #16233a;
-  --ink-soft: #223250;
-  --bg: #f3f4f1;
+  /* ---- brand / ink palette (matches ap-sales-dashboard) ---- */
+  --brand-50: #fef2f2;
+  --brand-100: #fee2e2;
+  --brand-200: #fecaca;
+  --brand-500: #ef4444;
+  --brand-600: #dc2626;
+  --brand-700: #b91c1c;
+
+  --ink-50: #f7f7f8;
+  --ink-100: #eeeef0;
+  --ink-200: #d9d9de;
+  --ink-300: #b5b5bd;
+  --ink-400: #8b8b96;
+  --ink-500: #6b6b76;
+  --ink-600: #52525c;
+  --ink-700: #3f3f47;
+  --ink-800: #26262c;
+  --ink-900: #151518;
+  --ink-950: #0c0c0e;
+
+  --ink: var(--ink-900);
+  --ink-soft: var(--ink-700);
+  --bg: var(--ink-50);
   --surface: #ffffff;
-  --border: #dde0d8;
-  --text: #16202b;
-  --muted: #64707a;
-  --accent: #c8722e;
-  --accent-soft: #f4e2d1;
+  --border: var(--ink-100);
+  --text: var(--ink-900);
+  --muted: var(--ink-400);
+  --accent: var(--brand-600);
+  --accent-soft: var(--brand-50);
+
+  /* ---- stock-status palette (kept as-is: fast / slow / dead) ---- */
   --fast: #1e7a5f;
   --fast-soft: #e0f0ea;
   --slow: #c98a1b;
@@ -17,9 +42,27 @@
   --dead: #b4402c;
   --dead-soft: #f7e0da;
 
-  --font-display: "Oswald", "Arial Narrow", sans-serif;
-  --font-body: "Inter", Arial, Helvetica, sans-serif;
+  /* ---- secondary accents so the UI isn't all-red ---- */
+  --blue-50: #eef4fc;
+  --blue-100: #dce9f8;
+  --blue-500: #2f6fb0;
+  --blue-600: #235d97;
+  --blue-700: #1b4a7a;
+  --blue: var(--blue-600);
+  --blue-soft: var(--blue-50);
+
+  --violet: #6d5aa8;
+  --violet-soft: #ece8f6;
+
+  --font-display: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-body: "Plus Jakarta Sans", system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+
+  --shadow-card: 0 1px 2px 0 rgba(15, 15, 20, 0.04), 0 1px 6px -1px rgba(15, 15, 20, 0.06);
+
+  /* neutral selection highlight (not pink) */
+  --selection-bg: var(--ink-200);
+  --selection-fg: var(--ink-900);
 }
 
 @theme inline {
@@ -29,9 +72,16 @@
   --color-border: var(--border);
   --color-muted: var(--muted);
   --color-accent: var(--accent);
+  --color-brand-50: var(--brand-50);
+  --color-brand-100: var(--brand-100);
+  --color-brand-600: var(--brand-600);
+  --color-brand-700: var(--brand-700);
   --color-fast: var(--fast);
   --color-slow: var(--slow);
   --color-dead: var(--dead);
+  --color-blue: var(--blue);
+  --color-blue-soft: var(--blue-soft);
+  --color-violet: var(--violet);
   --font-display: var(--font-display);
   --font-body: var(--font-body);
   --font-mono: var(--font-mono);
@@ -46,11 +96,12 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
 }
 
 ::selection {
-  background: var(--accent-soft);
-  color: var(--ink);
+  background: var(--selection-bg);
+  color: var(--selection-fg);
 }
 
 /* Scrollbar tuned to the ink palette, quietly */
@@ -62,13 +113,39 @@ body {
   background: var(--bg);
 }
 ::-webkit-scrollbar-thumb {
-  background: #c7cbc1;
+  background: var(--ink-200);
   border-radius: 6px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #a9aea1;
+  background: var(--ink-300);
 }
 
 .tabular {
   font-variant-numeric: tabular-nums;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  box-shadow: var(--shadow-card);
+}
+
+/* ---------- KPI CARD NUMBER SCALING ---------- */
+.kpi-card {
+  container-type: inline-size;
+  container-name: kpi-card;
+  overflow: hidden;
+}
+.kpi-value {
+  font-size: 1.5rem;
+  overflow-wrap: normal;
+  word-break: keep-all;
+  white-space: normal;
+}
+@container kpi-card (max-width: 220px) {
+  .kpi-value { font-size: 1.25rem; }
+}
+@container kpi-card (max-width: 165px) {
+  .kpi-value { font-size: 1.05rem; }
 }
