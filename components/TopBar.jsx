@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { Download } from "lucide-react";
+import ThemeToggle from "./ThemeToggle";
 
 export default function TopBar({ asOfDate, onExport }) {
   return (
@@ -12,6 +13,7 @@ export default function TopBar({ asOfDate, onExport }) {
           alt="Logo AP"
           width={38}
           height={38}
+          style={{ width: "38px", height: "38px" }}
           className="rounded-lg shrink-0 object-contain"
         />
         <div className="min-w-0">
@@ -25,6 +27,7 @@ export default function TopBar({ asOfDate, onExport }) {
       </div>
 
       <div className="flex items-center gap-2 flex-wrap justify-end">
+        <ThemeToggle />
         <button
           onClick={onExport}
           className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold bg-[var(--accent)] text-white hover:bg-[var(--brand-700,#b91c1c)] transition-colors shadow-sm"

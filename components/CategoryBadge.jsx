@@ -2,7 +2,7 @@ const STYLES = {
   "Fast Moving": { bg: "var(--fast-soft)", fg: "var(--fast)", label: "Fast Moving" },
   "Slow Moving": { bg: "var(--slow-soft)", fg: "var(--slow)", label: "Slow Moving" },
   DEAD: { bg: "var(--dead-soft)", fg: "var(--dead)", label: "Dead Stock" },
-  "-": { bg: "#eceeea", fg: "#7a8288", label: "Belum Dikategorikan" },
+  "-": { bg: "var(--neutral-soft)", fg: "var(--neutral-fg)", label: "Belum Dikategorikan" },
 };
 
 export default function CategoryBadge({ value }) {

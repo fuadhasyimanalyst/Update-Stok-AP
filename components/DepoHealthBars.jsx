@@ -40,7 +40,7 @@ export default function DepoHealthBars({ depoStats, onDepoClick, activeDepo }) {
           <LegendDot color="var(--fast)" label="Fast" />
           <LegendDot color="var(--slow)" label="Slow" />
           <LegendDot color="var(--dead)" label="Dead" />
-          <LegendDot color="#c9cdc3" label="Belum Dikategorikan" />
+          <LegendDot color="var(--neutral-fg)" label="Belum Dikategorikan" />
         </div>
       </div>
       <div className="flex flex-col gap-2.5">
@@ -62,11 +62,11 @@ export default function DepoHealthBars({ depoStats, onDepoClick, activeDepo }) {
               <span className="w-28 shrink-0 text-xs font-semibold text-[var(--text)] truncate">
                 {d.depo}
               </span>
-              <span className="flex-1 h-5 rounded-full overflow-hidden flex bg-[#eceeea]">
+              <span className="flex-1 h-5 rounded-full overflow-hidden flex bg-[var(--track-bg)]">
                 <Segment pct={fastPct} count={d.fast} color="var(--fast)" textColor="#ffffff" title="Fast Moving" />
                 <Segment pct={slowPct} count={d.slow} color="var(--slow)" textColor="#ffffff" title="Slow Moving" />
                 <Segment pct={deadPct} count={d.dead} color="var(--dead)" textColor="#ffffff" title="Dead Stock" />
-                <Segment pct={unknownPct} count={d.unknown} color="#c9cdc3" textColor="#4b4f47" title="Belum Dikategorikan" />
+                <Segment pct={unknownPct} count={d.unknown} color="var(--neutral-fg)" textColor="#ffffff" title="Belum Dikategorikan" />
               </span>
               <span className="w-14 shrink-0 text-right text-xs tabular text-[var(--muted)]">
                 {total} SKU
