@@ -172,6 +172,42 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* ---------------------------------------------------------------
+   MODE CETAK — dipicu otomatis oleh window.print() / Ctrl+P.
+   Paksa tampilan terang (walau user sedang pakai dark mode) supaya
+   hasil cetak/PDF hemat tinta dan mudah dibaca di atas kertas putih.
+--------------------------------------------------------------- */
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 12mm;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+    color: #0c0c0e !important;
+  }
+
+  .card {
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  table {
+    width: 100% !important;
+    font-size: 9.5px;
+  }
+
+  thead {
+    display: table-header-group; /* ulangi header tabel di tiap halaman cetak */
+  }
+
+  tr {
+    break-inside: avoid;
+  }
+}
+
 .card {
   background: var(--surface);
   border: 1px solid var(--border);

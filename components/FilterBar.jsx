@@ -1,6 +1,7 @@
 "use client";
 
 import { Search, Building2, Truck, Tags, Warehouse, Tag, RotateCcw } from "lucide-react";
+import SearchWithHistory from "./SearchWithHistory";
 
 function FilterSelect({ label, icon, value, onChange, options, placeholder, labelMap = {} }) {
   return (
@@ -49,16 +50,11 @@ export default function FilterBar({
             <Search size={12} />
             Cari Barang
           </label>
-          <div className="relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Cari nama / kode barang..."
-              className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] pl-8 pr-3 py-2 text-sm outline-none focus:border-[var(--blue)] transition-colors"
-            />
-          </div>
+          <SearchWithHistory
+            value={search}
+            onChange={setSearch}
+            placeholder="Cari nama / kode barang..."
+          />
         </div>
 
         <FilterSelect

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import * as XLSX from "xlsx";
 import { Package, Layers, Zap, Clock, AlertTriangle, Tag, ArrowUp } from "lucide-react";
 import StatCard from "./StatCard";
@@ -10,8 +10,24 @@ import QtyPerDepoChart from "./QtyPerDepoChart";
 import FilterBar from "./FilterBar";
 import TopBar from "./TopBar";
 import ScrollToTopButton from "./ScrollToTopButton";
+import ColumnPicker from "./ColumnPicker";
+import { exportStockToPdf } from "@/lib/exportPdf";
 
 const PAGE_SIZE = 50;
+const COLUMN_STORAGE_KEY = "update-stok-visible-columns";
+const LOCKED_COLUMN = "NAMA_BARANG"; // kolom ini selalu tampil, tidak bisa disembunyikan
+
+const ALL_COLUMNS = [
+  { key: "KODE_BARANG", label: "Kode Barang" },
+  { key: "NAMA_BARANG", label: "Nama Barang" },
+  { key: "SATUAN", label: "Satuan" },
+  { key: "QTY", label: "Qty", numeric: true },
+  { key: "GUDANG", label: "Gudang" },
+  { key: "DEPO", label: "Depo" },
+  { key: "SUPP", label: "Supp" },
+  { key: "KATEGORI", label: "Kategori" },
+  { key: "BARANG_PROMO", label: "Promo" },
+];
 
 function uniqueSorted(values) {
   return Array.from(new Set(values.filter(Boolean))).sort((a, b) => a.localeCompare(b));
@@ -36,6 +52,41 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
   const [sortKey, setSortKey] = useState("NAMA_BARANG");
   const [sortDir, setSortDir] = useState("asc");
   const [page, setPage] = useState(1);
+
+  // Kolom tabel yang tampil — default semua tampil, lalu dipulihkan dari
+  // localStorage kalau user pernah mengatur ulang sebelumnya.
+  const [visibleColumns, setVisibleColumns] = useState(
+    () => new Set(ALL_COLUMNS.map((c) => c.key))
+  );
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(COLUMN_STORAGE_KEY);
+      if (raw) {
+        const saved = JSON.parse(raw);
+        if (Array.isArray(saved) && saved.length > 0) {
+          setVisibleColumns(new Set(saved));
+        }
+      }
+    } catch {
+      // abaikan kalau localStorage tidak bisa dibaca
+    }
+  }, []);
+
+  function toggleColumn(key) {
+    if (key === LOCKED_COLUMN) return;
+    setVisibleColumns((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      try {
+        window.localStorage.setItem(COLUMN_STORAGE_KEY, JSON.stringify(Array.from(next)));
+      } catch {
+        // abaikan kalau localStorage penuh/diblokir
+      }
+      return next;
+    });
+  }
 
   const options = useMemo(
     () => ({
@@ -190,21 +241,86 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
     );
   }
 
-  const columns = [
-    { key: "KODE_BARANG", label: "Kode Barang" },
-    { key: "NAMA_BARANG", label: "Nama Barang" },
-    { key: "SATUAN", label: "Satuan" },
-    { key: "QTY", label: "Qty", numeric: true },
-    { key: "GUDANG", label: "Gudang" },
-    { key: "DEPO", label: "Depo" },
-    { key: "SUPP", label: "Supp" },
-    { key: "KATEGORI", label: "Kategori" },
-    { key: "BARANG_PROMO", label: "Promo" },
-  ];
+  const columns = ALL_COLUMNS.filter((c) => visibleColumns.has(c.key));
+
+  function renderCell(col, r, color) {
+    switch (col.key) {
+      case "KODE_BARANG":
+        return (
+          <td key={col.key} className="px-3 py-2 font-[family-name:var(--font-mono)] text-xs whitespace-nowrap font-semibold" style={{ color }}>
+            {r.KODE_BARANG}
+          </td>
+        );
+      case "NAMA_BARANG":
+        return (
+          <td key={col.key} className="px-3 py-2 max-w-[320px] truncate font-medium" style={{ color }} title={r.NAMA_BARANG}>
+            {r.NAMA_BARANG}
+          </td>
+        );
+      case "SATUAN":
+        return (
+          <td key={col.key} className="px-3 py-2 whitespace-nowrap">
+            {r.SATUAN}
+          </td>
+        );
+      case "QTY":
+        return (
+          <td key={col.key} className="px-3 py-2 text-right font-[family-name:var(--font-mono)] tabular whitespace-nowrap">
+            {formatQty(r.QTY)}
+          </td>
+        );
+      case "GUDANG":
+        return (
+          <td key={col.key} className="px-3 py-2 whitespace-nowrap">
+            {r.GUDANG}
+          </td>
+        );
+      case "DEPO":
+        return (
+          <td key={col.key} className="px-3 py-2 whitespace-nowrap font-medium">
+            {r.DEPO}
+          </td>
+        );
+      case "SUPP":
+        return (
+          <td key={col.key} className="px-3 py-2 whitespace-nowrap">
+            {r.SUPP}
+          </td>
+        );
+      case "KATEGORI":
+        return (
+          <td key={col.key} className="px-3 py-2 whitespace-nowrap">
+            <CategoryBadge value={r.KATEGORI} />
+          </td>
+        );
+      case "BARANG_PROMO":
+        return (
+          <td key={col.key} className="px-3 py-2 whitespace-nowrap">
+            {r.BARANG_PROMO === "YA" ? (
+              <span className="text-[var(--accent)] font-semibold text-xs">● PROMO</span>
+            ) : (
+              <span className="text-[var(--muted)] text-xs">—</span>
+            )}
+          </td>
+        );
+      default:
+        return <td key={col.key} className="px-3 py-2 whitespace-nowrap">{r[col.key]}</td>;
+    }
+  }
+
+  const qtyColIndex = columns.findIndex((c) => c.key === "QTY");
+
+  function exportPdf() {
+    exportStockToPdf({ rows: sorted, columns, asOfDate, stats });
+  }
+
+  function handlePrint() {
+    window.print();
+  }
 
   return (
     <div className="min-h-screen bg-[var(--bg)]">
-      <TopBar asOfDate={asOfDate} onExport={exportExcel} />
+      <TopBar asOfDate={asOfDate} onExportExcel={exportExcel} onExportPdf={exportPdf} onPrint={handlePrint} />
 
       <main className="px-4 sm:px-6 py-6 flex flex-col gap-5 max-w-[1600px] mx-auto">
         {/* Stat cards */}
@@ -218,31 +334,46 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
         </div>
 
         {/* Qty per Depo bar chart */}
-        <QtyPerDepoChart data={depoQty} onDepoClick={setDepo} activeDepo={depo} />
+        <div className="print:hidden">
+          <QtyPerDepoChart data={depoQty} onDepoClick={setDepo} activeDepo={depo} />
+        </div>
 
         {/* Signature health bars */}
-        <DepoHealthBars depoStats={depoStats} onDepoClick={setDepo} activeDepo={depo} />
+        <div className="print:hidden">
+          <DepoHealthBars depoStats={depoStats} onDepoClick={setDepo} activeDepo={depo} />
+        </div>
 
         {/* Table with filters on top */}
-        <div className="card overflow-hidden">
-          <FilterBar
-            options={options}
-            search={search}
-            setSearch={(v) => { setSearch(v); setPage(1); }}
-            depo={depo}
-            setDepo={(v) => { setDepo(v); setPage(1); }}
-            supp={supp}
-            setSupp={(v) => { setSupp(v); setPage(1); }}
-            kategori={kategori}
-            setKategori={(v) => { setKategori(v); setPage(1); }}
-            gudang={gudang}
-            setGudang={(v) => { setGudang(v); setPage(1); }}
-            promo={promo}
-            setPromo={(v) => { setPromo(v); setPage(1); }}
-            onReset={resetFilters}
-          />
+        <div className="card overflow-hidden print:shadow-none print:border-none">
+          <div className="print:hidden">
+            <FilterBar
+              options={options}
+              search={search}
+              setSearch={(v) => { setSearch(v); setPage(1); }}
+              depo={depo}
+              setDepo={(v) => { setDepo(v); setPage(1); }}
+              supp={supp}
+              setSupp={(v) => { setSupp(v); setPage(1); }}
+              kategori={kategori}
+              setKategori={(v) => { setKategori(v); setPage(1); }}
+              gudang={gudang}
+              setGudang={(v) => { setGudang(v); setPage(1); }}
+              promo={promo}
+              setPromo={(v) => { setPromo(v); setPage(1); }}
+              onReset={resetFilters}
+            />
+          </div>
 
-          <div className="overflow-x-auto">
+          <div className="flex justify-end px-4 sm:px-5 py-3 border-b border-[var(--border)] print:hidden">
+            <ColumnPicker
+              allColumns={ALL_COLUMNS}
+              visible={visibleColumns}
+              onToggle={toggleColumn}
+              lockedKey={LOCKED_COLUMN}
+            />
+          </div>
+
+          <div className="overflow-x-auto print:hidden">
             <table className="w-full text-sm border-collapse">
               <thead>
                 <tr className="bg-[var(--bg)] border-b border-[var(--border)]">
@@ -270,36 +401,7 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
                         i % 2 === 1 ? "bg-[var(--bg)]/40" : ""
                       } hover:bg-[var(--accent-soft)]/40 transition-colors`}
                     >
-                      <td
-                        className="px-3 py-2 font-[family-name:var(--font-mono)] text-xs whitespace-nowrap font-semibold"
-                        style={{ color }}
-                      >
-                        {r.KODE_BARANG}
-                      </td>
-                      <td
-                        className="px-3 py-2 max-w-[320px] truncate font-medium"
-                        style={{ color }}
-                        title={r.NAMA_BARANG}
-                      >
-                        {r.NAMA_BARANG}
-                      </td>
-                      <td className="px-3 py-2 whitespace-nowrap">{r.SATUAN}</td>
-                      <td className="px-3 py-2 text-right font-[family-name:var(--font-mono)] tabular whitespace-nowrap">
-                        {formatQty(r.QTY)}
-                      </td>
-                      <td className="px-3 py-2 whitespace-nowrap">{r.GUDANG}</td>
-                      <td className="px-3 py-2 whitespace-nowrap font-medium">{r.DEPO}</td>
-                      <td className="px-3 py-2 whitespace-nowrap">{r.SUPP}</td>
-                      <td className="px-3 py-2 whitespace-nowrap">
-                        <CategoryBadge value={r.KATEGORI} />
-                      </td>
-                      <td className="px-3 py-2 whitespace-nowrap">
-                        {r.BARANG_PROMO === "YA" ? (
-                          <span className="text-[var(--accent)] font-semibold text-xs">● PROMO</span>
-                        ) : (
-                          <span className="text-[var(--muted)] text-xs">—</span>
-                        )}
-                      </td>
+                      {columns.map((col) => renderCell(col, r, color))}
                     </tr>
                   );
                 })}
@@ -314,21 +416,83 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
               {pageRows.length > 0 && (
                 <tfoot>
                   <tr className="border-t-2 border-[var(--border)] bg-[var(--bg)] font-bold">
-                    <td colSpan={3} className="px-3 py-2.5 text-xs uppercase tracking-wider text-[var(--ink)]">
-                      Grand Total ({formatQty(sorted.length)} SKU)
-                    </td>
-                    <td className="px-3 py-2.5 text-right font-[family-name:var(--font-mono)] tabular text-[var(--ink)] whitespace-nowrap">
-                      {formatQty(stats.totalQty)}
-                    </td>
-                    <td colSpan={5} className="px-3 py-2.5" />
+                    {qtyColIndex === -1 ? (
+                      <td colSpan={columns.length} className="px-3 py-2.5 text-xs uppercase tracking-wider text-[var(--ink)]">
+                        Grand Total ({formatQty(sorted.length)} SKU)
+                      </td>
+                    ) : (
+                      <>
+                        {qtyColIndex > 0 && (
+                          <td colSpan={qtyColIndex} className="px-3 py-2.5 text-xs uppercase tracking-wider text-[var(--ink)]">
+                            Grand Total ({formatQty(sorted.length)} SKU)
+                          </td>
+                        )}
+                        <td className="px-3 py-2.5 text-right font-[family-name:var(--font-mono)] tabular text-[var(--ink)] whitespace-nowrap">
+                          {qtyColIndex === 0 ? `Grand Total (${formatQty(sorted.length)} SKU) — ` : ""}
+                          {formatQty(stats.totalQty)}
+                        </td>
+                        {qtyColIndex < columns.length - 1 && (
+                          <td colSpan={columns.length - qtyColIndex - 1} className="px-3 py-2.5" />
+                        )}
+                      </>
+                    )}
                   </tr>
                 </tfoot>
               )}
             </table>
           </div>
 
+          {/* Tabel khusus cetak/PDF-browser: menampilkan SEMUA barang hasil filter
+              (bukan cuma 1 halaman), supaya hasil print/simpan-sebagai-PDF lengkap. */}
+          <div className="hidden print:block overflow-visible">
+            <table className="w-full text-[10px] border-collapse">
+              <thead>
+                <tr className="border-b-2 border-black">
+                  {columns.map((col) => (
+                    <th
+                      key={col.key}
+                      className={`px-2 py-1.5 text-left font-bold uppercase tracking-wide whitespace-nowrap ${
+                        col.numeric ? "text-right" : ""
+                      }`}
+                    >
+                      {col.label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {sorted.map((r) => (
+                  <tr key={r.id} className="border-b border-black/20 break-inside-avoid">
+                    {columns.map((col) => renderCell(col, r, undefined))}
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="border-t-2 border-black font-bold">
+                  {qtyColIndex === -1 ? (
+                    <td colSpan={columns.length} className="px-2 py-1.5 text-[10px] uppercase">
+                      Grand Total ({formatQty(sorted.length)} SKU)
+                    </td>
+                  ) : (
+                    <>
+                      {qtyColIndex > 0 && (
+                        <td colSpan={qtyColIndex} className="px-2 py-1.5 text-[10px] uppercase">
+                          Grand Total ({formatQty(sorted.length)} SKU)
+                        </td>
+                      )}
+                      <td className="px-2 py-1.5 text-right whitespace-nowrap">{formatQty(stats.totalQty)}</td>
+                      {qtyColIndex < columns.length - 1 && (
+                        <td colSpan={columns.length - qtyColIndex - 1} className="px-2 py-1.5" />
+                      )}
+                    </>
+                  )}
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
           {/* Pagination */}
-          <div className="flex items-center justify-between px-4 py-3 border-t border-[var(--border)] text-sm">
+          <div className="flex items-center justify-between px-4 py-3 border-t border-[var(--border)] text-sm print:hidden">
             <span className="text-[var(--muted)]">
               Menampilkan {pageRows.length === 0 ? 0 : (pageClamped - 1) * PAGE_SIZE + 1}
               {"–"}
@@ -363,7 +527,7 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
           </span>
           <button
             onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold border border-[var(--border)] text-[var(--blue)] hover:bg-[var(--blue-soft)] hover:border-[var(--blue)] transition-colors"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold border border-[var(--border)] text-[var(--blue)] hover:bg-[var(--blue-soft)] hover:border-[var(--blue)] transition-colors print:hidden"
           >
             <ArrowUp size={14} /> Kembali ke Atas
           </button>

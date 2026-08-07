@@ -38,7 +38,7 @@ export default function ScrollToTopButton() {
       onClick={handleClick}
       title={atTop ? "Ke bawah" : "Kembali ke atas"}
       aria-label={atTop ? "Gulir ke bawah" : "Gulir ke atas"}
-      className="fixed bottom-5 right-5 z-40 flex items-center justify-center h-11 w-11 rounded-full bg-[var(--blue)] text-white shadow-lg hover:bg-[var(--blue-700)] transition-all active:scale-95"
+      className="fixed bottom-5 right-5 z-40 flex items-center justify-center h-11 w-11 rounded-full bg-[var(--blue)] text-white shadow-lg hover:bg-[var(--blue-700)] transition-all active:scale-95 print:hidden"
     >
       {atTop ? <ArrowDown size={18} /> : <ArrowUp size={18} />}
     </button>
