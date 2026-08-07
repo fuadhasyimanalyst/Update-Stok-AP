@@ -5,7 +5,15 @@ import Image from "next/image";
 import { Download, Printer, ChevronDown, FileSpreadsheet, FileText } from "lucide-react";
 import ThemeToggle from "./ThemeToggle";
 
-export default function TopBar({ asOfDate, onExportExcel, onExportPdf, onPrint }) {
+function formatSyncTime(generatedAt) {
+  if (!generatedAt) return null;
+  const d = new Date(generatedAt);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+}
+
+export default function TopBar({ asOfDate, generatedAt, onExportExcel, onExportPdf, onPrint }) {
+  const syncTime = formatSyncTime(generatedAt);
   const [exportOpen, setExportOpen] = useState(false);
   const wrapRef = useRef(null);
 
@@ -34,6 +42,7 @@ export default function TopBar({ asOfDate, onExportExcel, onExportPdf, onPrint }
           </h1>
           <p className="text-xs text-[var(--muted)] font-medium mt-0.5 truncate">
             Fast / Slow Moving &amp; Dead Stock &middot; Data per: {asOfDate || "—"}
+            {syncTime ? ` · Update jam ${syncTime}` : ""}
           </p>
         </div>
       </div>

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import * as XLSX from "xlsx";
-import { Package, Layers, Zap, Clock, AlertTriangle, Tag, ArrowUp } from "lucide-react";
+import { Package, Layers, Zap, Clock, AlertTriangle, Tag, ArrowUp, ChevronLeft, ChevronRight } from "lucide-react";
 import StatCard from "./StatCard";
 import CategoryBadge, { CATEGORY_STYLES } from "./CategoryBadge";
 import DepoHealthBars from "./DepoHealthBars";
@@ -320,7 +320,7 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
 
   return (
     <div className="min-h-screen bg-[var(--bg)]">
-      <TopBar asOfDate={asOfDate} onExportExcel={exportExcel} onExportPdf={exportPdf} onPrint={handlePrint} />
+      <TopBar asOfDate={asOfDate} generatedAt={generatedAt} onExportExcel={exportExcel} onExportPdf={exportPdf} onPrint={handlePrint} />
 
       <main className="px-4 sm:px-6 py-6 flex flex-col gap-5 max-w-[1600px] mx-auto">
         {/* Stat cards */}
@@ -491,30 +491,35 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
             </table>
           </div>
 
-          {/* Pagination */}
-          <div className="flex items-center justify-between px-4 py-3 border-t border-[var(--border)] text-sm print:hidden">
-            <span className="text-[var(--muted)]">
+          {/* Pagination — dibuat ringkas di layar kecil (ikon saja, tanpa teks
+              "Sebelumnya/Berikutnya" yang memakan tempat di HP) */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-0 px-3 sm:px-4 py-2.5 sm:py-3 border-t border-[var(--border)] text-xs sm:text-sm print:hidden">
+            <span className="text-[var(--muted)] text-center sm:text-left">
               Menampilkan {pageRows.length === 0 ? 0 : (pageClamped - 1) * PAGE_SIZE + 1}
               {"–"}
               {Math.min(pageClamped * PAGE_SIZE, sorted.length)} dari {formatQty(sorted.length)} barang
             </span>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2">
               <button
                 disabled={pageClamped <= 1}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
-                className="px-2.5 py-1 rounded-md border border-[var(--border)] disabled:opacity-40 disabled:cursor-not-allowed hover:border-[var(--muted)]"
+                aria-label="Halaman sebelumnya"
+                className="flex items-center gap-1 px-2 py-1 sm:px-2.5 sm:py-1 rounded-md border border-[var(--border)] disabled:opacity-40 disabled:cursor-not-allowed hover:border-[var(--muted)]"
               >
-                ‹ Sebelumnya
+                <ChevronLeft size={14} />
+                <span className="hidden sm:inline">Sebelumnya</span>
               </button>
-              <span className="tabular text-[var(--muted)]">
+              <span className="tabular text-[var(--muted)] px-1">
                 {pageClamped} / {totalPages}
               </span>
               <button
                 disabled={pageClamped >= totalPages}
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                className="px-2.5 py-1 rounded-md border border-[var(--border)] disabled:opacity-40 disabled:cursor-not-allowed hover:border-[var(--muted)]"
+                aria-label="Halaman berikutnya"
+                className="flex items-center gap-1 px-2 py-1 sm:px-2.5 sm:py-1 rounded-md border border-[var(--border)] disabled:opacity-40 disabled:cursor-not-allowed hover:border-[var(--muted)]"
               >
-                Berikutnya ›
+                <span className="hidden sm:inline">Berikutnya</span>
+                <ChevronRight size={14} />
               </button>
             </div>
           </div>
