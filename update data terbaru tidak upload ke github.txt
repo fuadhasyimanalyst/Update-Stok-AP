@@ -1,0 +1,5 @@
+update data 
+1. ambil data melalui isx
+
+2. copy code ini diterminal
+npm run sync-to-supabase
