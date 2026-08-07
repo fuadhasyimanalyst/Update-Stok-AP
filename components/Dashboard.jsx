@@ -20,11 +20,12 @@ const LOCKED_COLUMN = "NAMA_BARANG"; // kolom ini selalu tampil, tidak bisa dise
 const ALL_COLUMNS = [
   { key: "NAMA_BARANG", label: "Nama Barang" },
   { key: "QTY", label: "Qty", numeric: true },
-  { key: "KODE_BARANG", label: "Kode Barang" },
-  { key: "SATUAN", label: "Satuan" },
-  { key: "GUDANG", label: "Gudang" },
   { key: "DEPO", label: "Depo" },
   { key: "SUPP", label: "Supp" },
+  { key: "CGRPDESC", label: "SUPP_FULL" },
+  { key: "GUDANG", label: "Gudang" },
+  { key: "KODE_BARANG", label: "Kode Barang" },
+  { key: "SATUAN", label: "Satuan" },
   { key: "KATEGORI", label: "Kategori" },
   { key: "BARANG_PROMO", label: "Promo" },
 ];
