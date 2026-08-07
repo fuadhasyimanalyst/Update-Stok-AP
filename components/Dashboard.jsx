@@ -18,10 +18,10 @@ const COLUMN_STORAGE_KEY = "update-stok-visible-columns";
 const LOCKED_COLUMN = "NAMA_BARANG"; // kolom ini selalu tampil, tidak bisa disembunyikan
 
 const ALL_COLUMNS = [
-  { key: "KODE_BARANG", label: "Kode Barang" },
   { key: "NAMA_BARANG", label: "Nama Barang" },
-  { key: "SATUAN", label: "Satuan" },
   { key: "QTY", label: "Qty", numeric: true },
+  { key: "KODE_BARANG", label: "Kode Barang" },
+  { key: "SATUAN", label: "Satuan" },
   { key: "GUDANG", label: "Gudang" },
   { key: "DEPO", label: "Depo" },
   { key: "SUPP", label: "Supp" },
@@ -193,30 +193,22 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
   }
 
   function exportExcel() {
-    // Susun data sesuai kolom yang tampil di tabel, dengan header rapi (bukan field mentah)
-    const headers = [
-      "Kode Barang",
-      "Nama Barang",
-      "Satuan",
-      "Qty",
-      "Gudang",
-      "Depo",
-      "Supp",
-      "Kategori",
-      "Promo",
-    ];
-    const body = sorted.map((r) => [
-      r.KODE_BARANG,
-      r.NAMA_BARANG,
-      r.SATUAN,
-      r.QTY,
-      r.GUDANG,
-      r.DEPO,
-      r.SUPP,
-      r.KATEGORI === "DEAD" ? "Dead Stock" : r.KATEGORI,
-      r.BARANG_PROMO === "YA" ? "Promo" : "Non Promo",
-    ]);
-    body.push(["", "GRAND TOTAL", "", stats.totalQty, "", "", "", "", ""]);
+    // Ikuti urutan & visibilitas kolom yang sedang tampil di tabel (termasuk
+    // hasil pengaturan "Kolom"), supaya Excel selalu konsisten dengan layar.
+    const headers = columns.map((c) => c.label);
+    const body = sorted.map((r) =>
+      columns.map((c) => {
+        if (c.key === "KATEGORI") return r.KATEGORI === "DEAD" ? "Dead Stock" : r.KATEGORI;
+        if (c.key === "BARANG_PROMO") return r.BARANG_PROMO === "YA" ? "Promo" : "Non Promo";
+        return r[c.key];
+      })
+    );
+    const totalRow = columns.map((c) => {
+      if (c.key === "NAMA_BARANG") return "GRAND TOTAL";
+      if (c.key === "QTY") return stats.totalQty;
+      return "";
+    });
+    body.push(totalRow);
 
     const worksheet = XLSX.utils.aoa_to_sheet([headers, ...body]);
 

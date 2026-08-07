@@ -26,8 +26,8 @@ export default function TopBar({ asOfDate, generatedAt, onExportExcel, onExportP
   }, []);
 
   return (
-    <header className="sticky top-0 z-20 flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border)] bg-[var(--surface)]/90 backdrop-blur px-4 sm:px-6 py-3 sm:py-4 print:static print:bg-white print:backdrop-blur-none">
-      <div className="flex items-center gap-3 min-w-0">
+    <header className="sticky top-0 z-20 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3 border-b border-[var(--border)] bg-[var(--surface)]/90 backdrop-blur px-4 sm:px-6 py-3 sm:py-4 print:static print:bg-white print:backdrop-blur-none">
+      <div className="flex items-center gap-3 min-w-0 w-full sm:w-auto">
         <Image
           src="/logo-api.webp"
           alt="Logo AP"
@@ -36,18 +36,18 @@ export default function TopBar({ asOfDate, generatedAt, onExportExcel, onExportP
           style={{ width: "38px", height: "38px" }}
           className="rounded-lg shrink-0 object-contain"
         />
-        <div className="min-w-0">
-          <h1 className="text-base sm:text-xl font-extrabold tracking-tight text-[var(--ink)] truncate">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-base sm:text-xl font-extrabold tracking-tight text-[var(--ink)]">
             Update Stok
           </h1>
-          <p className="text-xs text-[var(--muted)] font-medium mt-0.5 truncate">
+          <p className="text-[11px] sm:text-xs text-[var(--muted)] font-medium mt-0.5 leading-snug">
             Fast / Slow Moving &amp; Dead Stock &middot; Data per: {asOfDate || "—"}
             {syncTime ? ` · Update jam ${syncTime}` : ""}
           </p>
         </div>
       </div>
 
-      <div className="flex items-center gap-2 flex-wrap justify-end print:hidden">
+      <div className="flex items-center gap-2 flex-wrap justify-end w-full sm:w-auto print:hidden">
         <ThemeToggle />
 
         <button
