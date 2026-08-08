@@ -108,7 +108,7 @@ function categoryColor(value) {
 }
 
 export default function Dashboard({ rows, asOfDate, generatedAt }) {
-  const [activePage, setActivePage] = useState("semua");
+  const [activePage, setActivePage] = useState("nonpromo");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [namaBarang, setNamaBarang] = useState("");
   const [depo, setDepo] = useState("");
