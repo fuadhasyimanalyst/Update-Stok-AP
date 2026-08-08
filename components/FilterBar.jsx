@@ -51,7 +51,7 @@ export default function FilterBar({
           onChange={setKategori}
           options={options.kategori}
           placeholder="Semua Kategori"
-          labelMap={{ DEAD: "Dead Stock", "-": "Belum Dikategorikan" }}
+          labelMap={{ DEAD: "Dead Stock" }}
         />
         <SearchableSelect
           label="Gudang"

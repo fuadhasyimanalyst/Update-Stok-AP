@@ -2,11 +2,12 @@ const STYLES = {
   "Fast Moving": { bg: "var(--fast-soft)", fg: "var(--fast)", label: "Fast Moving" },
   "Slow Moving": { bg: "var(--slow-soft)", fg: "var(--slow)", label: "Slow Moving" },
   DEAD: { bg: "var(--dead-soft)", fg: "var(--dead)", label: "Dead Stock" },
-  "-": { bg: "var(--neutral-soft)", fg: "var(--neutral-fg)", label: "Belum Dikategorikan" },
 };
 
 export default function CategoryBadge({ value }) {
-  const style = STYLES[value] || STYLES["-"];
+  // Semua barang sudah selalu punya kategori (default Slow Moving), tapi
+  // fallback ke style Slow Moving dijaga untuk data lama/tak terduga.
+  const style = STYLES[value] || STYLES["Slow Moving"];
   return (
     <span
       className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold tracking-wide uppercase whitespace-nowrap"

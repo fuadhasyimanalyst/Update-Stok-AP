@@ -103,7 +103,7 @@ function formatQty(n) {
 }
 
 function categoryColor(value) {
-  const style = CATEGORY_STYLES[value] || CATEGORY_STYLES["-"];
+  const style = CATEGORY_STYLES[value] || CATEGORY_STYLES["Slow Moving"];
   return style.fg;
 }
 
@@ -265,13 +265,12 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
   }, [pageRows.length, pageClamped]);
 
   const stats = useMemo(() => {
-    const acc = { totalQty: 0, fast: 0, slow: 0, dead: 0, unknown: 0, promo: 0 };
+    const acc = { totalQty: 0, fast: 0, slow: 0, dead: 0, promo: 0 };
     for (const r of filtered) {
       acc.totalQty += r.QTY;
       if (r.KATEGORI === "Fast Moving") acc.fast += 1;
-      else if (r.KATEGORI === "Slow Moving") acc.slow += 1;
       else if (r.KATEGORI === "DEAD") acc.dead += 1;
-      else acc.unknown += 1;
+      else acc.slow += 1; // Slow Moving, dan fallback barang yang belum ada di master kategori
       if (r.BARANG_PROMO === "YA") acc.promo += 1;
     }
     return acc;
@@ -280,12 +279,11 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
   const depoStats = useMemo(() => {
     const map = new Map();
     for (const r of filteredByPanel) {
-      if (!map.has(r.DEPO)) map.set(r.DEPO, { depo: r.DEPO, fast: 0, slow: 0, dead: 0, unknown: 0 });
+      if (!map.has(r.DEPO)) map.set(r.DEPO, { depo: r.DEPO, fast: 0, slow: 0, dead: 0 });
       const d = map.get(r.DEPO);
       if (r.KATEGORI === "Fast Moving") d.fast += 1;
-      else if (r.KATEGORI === "Slow Moving") d.slow += 1;
       else if (r.KATEGORI === "DEAD") d.dead += 1;
-      else d.unknown += 1;
+      else d.slow += 1; // Slow Moving, dan fallback barang yang belum ada di master kategori
     }
     return Array.from(map.values()).sort((a, b) => a.depo.localeCompare(b.depo));
   }, [filteredByPanel]);

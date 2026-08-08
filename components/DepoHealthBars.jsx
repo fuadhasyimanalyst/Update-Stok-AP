@@ -46,19 +46,17 @@ export default function DepoHealthBars({ depoStats, onDepoClick, activeDepo }) {
             <LegendDot color="var(--fast)" label="Fast" />
             <LegendDot color="var(--slow)" label="Slow" />
             <LegendDot color="var(--dead)" label="Dead" />
-            <LegendDot color="var(--neutral-fg)" label="Belum Dikategorikan" />
           </div>
           <ChartExportButtons targetRef={captureRef} filename="grafik-kesehatan-stok-per-depo" />
         </div>
       </div>
       <div className="flex flex-col gap-2.5">
         {depoStats.map((d) => {
-          const total = d.fast + d.slow + d.dead + d.unknown || 1;
+          const total = d.fast + d.slow + d.dead || 1;
           const isActive = activeDepo === d.depo;
           const fastPct = (d.fast / total) * 100;
           const slowPct = (d.slow / total) * 100;
           const deadPct = (d.dead / total) * 100;
-          const unknownPct = (d.unknown / total) * 100;
           return (
             <button
               key={d.depo}
@@ -74,7 +72,6 @@ export default function DepoHealthBars({ depoStats, onDepoClick, activeDepo }) {
                 <Segment pct={fastPct} count={d.fast} color="var(--fast)" textColor="#ffffff" title="Fast Moving" />
                 <Segment pct={slowPct} count={d.slow} color="var(--slow)" textColor="#ffffff" title="Slow Moving" />
                 <Segment pct={deadPct} count={d.dead} color="var(--dead)" textColor="#ffffff" title="Dead Stock" />
-                <Segment pct={unknownPct} count={d.unknown} color="var(--neutral-fg)" textColor="#ffffff" title="Belum Dikategorikan" />
               </span>
               <span className="w-14 shrink-0 text-right text-xs tabular text-[var(--muted)]">
                 {total} SKU
