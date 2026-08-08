@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { Download, Printer, ChevronDown, FileSpreadsheet, FileText } from "lucide-react";
+import { Download, Printer, ChevronDown, FileSpreadsheet, FileText, Menu } from "lucide-react";
 import ThemeToggle from "./ThemeToggle";
 
 function formatSyncTime(generatedAt) {
@@ -12,7 +12,7 @@ function formatSyncTime(generatedAt) {
   return d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
 }
 
-export default function TopBar({ asOfDate, generatedAt, onExportExcel, onExportPdf, onPrint }) {
+export default function TopBar({ asOfDate, generatedAt, onExportExcel, onExportPdf, onPrint, onMenuClick }) {
   const syncTime = formatSyncTime(generatedAt);
   const [exportOpen, setExportOpen] = useState(false);
   const wrapRef = useRef(null);
@@ -28,6 +28,14 @@ export default function TopBar({ asOfDate, generatedAt, onExportExcel, onExportP
   return (
     <header className="sticky top-0 z-20 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3 border-b border-[var(--border)] bg-[var(--surface)]/90 backdrop-blur px-4 sm:px-6 py-3 sm:py-4 print:static print:bg-white print:backdrop-blur-none">
       <div className="flex items-center gap-3 min-w-0 w-full sm:w-auto">
+        <button
+          type="button"
+          onClick={onMenuClick}
+          aria-label="Buka menu kategori"
+          className="lg:hidden shrink-0 p-2 rounded-lg border border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)] print:hidden"
+        >
+          <Menu size={18} />
+        </button>
         <Image
           src="/logo-api.webp"
           alt="Logo AP"

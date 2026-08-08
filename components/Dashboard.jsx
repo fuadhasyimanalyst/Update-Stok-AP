@@ -1,14 +1,28 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import * as XLSX from "xlsx";
-import { Package, Layers, Zap, Clock, AlertTriangle, Tag, ArrowUp, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Package,
+  Layers,
+  Zap,
+  Clock,
+  AlertTriangle,
+  Tag,
+  ArrowUp,
+  ChevronLeft,
+  ChevronRight,
+  LayoutGrid,
+  Sparkles,
+  Ban,
+} from "lucide-react";
 import StatCard from "./StatCard";
 import CategoryBadge, { CATEGORY_STYLES } from "./CategoryBadge";
 import DepoHealthBars from "./DepoHealthBars";
 import QtyPerDepoChart from "./QtyPerDepoChart";
 import FilterBar from "./FilterBar";
 import TopBar from "./TopBar";
+import Sidebar from "./Sidebar";
 import ScrollToTopButton from "./ScrollToTopButton";
 import ColumnPicker from "./ColumnPicker";
 import { exportStockToPdf } from "@/lib/exportPdf";
@@ -16,6 +30,56 @@ import { exportStockToPdf } from "@/lib/exportPdf";
 const PAGE_SIZE = 50;
 const COLUMN_STORAGE_KEY = "update-stok-visible-columns";
 const LOCKED_COLUMN = "NAMA_BARANG"; // kolom ini selalu tampil, tidak bisa disembunyikan
+
+// Kata kunci nama barang yang dianggap "Aksesoris" (aksesoris panjang/pendek,
+// gayung, panel, dsb.) — barang ini punya page sendiri, jadi tidak dobel
+// muncul di page Barang Promo / Non Promo.
+const ACCESSORY_KEYWORDS = ["AKSESORIS", "GAYUNG", "PANEL"];
+
+// Supplier yang sudah tidak bermitra lagi tapi masih ada sisa stoknya.
+// Tambahkan nama supplier lain di sini kalau ada kasus serupa nanti.
+const DISCONTINUED_SUPPLIERS = ["PACIFIC"];
+
+function isAccessory(row) {
+  const name = (row.NAMA_BARANG || "").toUpperCase();
+  return ACCESSORY_KEYWORDS.some((kw) => name.includes(kw));
+}
+
+function isDiscontinuedSupplier(row) {
+  const text = `${row.SUPP || ""} ${row.CGRPDESC || ""}`.toUpperCase();
+  return DISCONTINUED_SUPPLIERS.some((kw) => text.includes(kw));
+}
+
+// Setiap barang jatuh ke SATU kategori page saja (urutan prioritas di bawah),
+// supaya tidak ada barang yang dobel tampil di 2 page berbeda.
+function classifyRow(row) {
+  if (isDiscontinuedSupplier(row)) return "nonaktif";
+  if (isAccessory(row)) return "aksesoris";
+  return row.BARANG_PROMO === "YA" ? "promo" : "nonpromo";
+}
+
+const PAGES = [
+  {
+    id: "nonpromo",
+    label: "Barang Non Promo",
+    description: "Barang reguler di luar promo dan aksesoris.",
+    icon: Package,
+  },
+  { id: "promo", label: "Barang Promo", description: "Barang yang sedang berstatus promo.", icon: Tag },
+  { id: "semua", label: "Semua Barang", description: "Seluruh stok dari semua kategori.", icon: LayoutGrid },
+  {
+    id: "aksesoris",
+    label: "Aksesoris",
+    description: "Aksesoris panjang/pendek, gayung, panel, dan sejenisnya.",
+    icon: Sparkles,
+  },
+  {
+    id: "nonaktif",
+    label: "Supplier Non-Aktif",
+    description: "Sisa stok dari supplier yang sudah tidak bermitra lagi (mis. Pacific).",
+    icon: Ban,
+  },
+];
 
 const ALL_COLUMNS = [
   { key: "NAMA_BARANG", label: "Nama Barang" },
@@ -44,15 +108,29 @@ function categoryColor(value) {
 }
 
 export default function Dashboard({ rows, asOfDate, generatedAt }) {
-  const [search, setSearch] = useState("");
+  const [activePage, setActivePage] = useState("semua");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [namaBarang, setNamaBarang] = useState("");
   const [depo, setDepo] = useState("");
   const [supp, setSupp] = useState("");
   const [kategori, setKategori] = useState("");
   const [gudang, setGudang] = useState("");
-  const [promo, setPromo] = useState(""); // "" = semua, "YA" = promo, "TIDAK" = non promo
   const [sortKey, setSortKey] = useState("NAMA_BARANG");
   const [sortDir, setSortDir] = useState("asc");
   const [page, setPage] = useState(1);
+
+  // Menahan tinggi tabel supaya tidak "loncat" naik-turun saat mengetik di
+  // kolom pencarian (jumlah baris hasil filter berubah tiap ketukan huruf).
+  // Direset ke 0 tiap pindah page sidebar, supaya tidak kebawa tinggi dari
+  // page lain yang datanya jauh lebih banyak.
+  const [tableMinHeight, setTableMinHeight] = useState(0);
+  const tableWrapRef = useRef(null);
+
+  useEffect(() => {
+    setTableMinHeight(0);
+  }, [activePage]);
+
+  const currentPageMeta = PAGES.find((p) => p.id === activePage) || PAGES[0];
 
   // Kolom tabel yang tampil — default semua tampil, lalu dipulihkan dari
   // localStorage kalau user pernah mengatur ulang sebelumnya.
@@ -89,28 +167,70 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
     });
   }
 
+  // Jumlah barang per page (dihitung dari SELURUH data, bukan hasil filter),
+  // dipakai untuk badge angka di Sidebar.
+  const pageCounts = useMemo(() => {
+    const counts = { semua: rows.length, promo: 0, nonpromo: 0, aksesoris: 0, nonaktif: 0 };
+    for (const r of rows) {
+      counts[classifyRow(r)] += 1;
+    }
+    return counts;
+  }, [rows]);
+
+  // Subset data untuk page sidebar yang sedang aktif.
+  const pageRowsAll = useMemo(() => {
+    if (activePage === "semua") return rows;
+    return rows.filter((r) => classifyRow(r) === activePage);
+  }, [rows, activePage]);
+
+  function selectPage(id) {
+    setActivePage(id);
+    setNamaBarang("");
+    setDepo("");
+    setSupp("");
+    setKategori("");
+    setGudang("");
+    setPage(1);
+  }
+
+  // Opsi dropdown filter bersifat "cascading": tiap dropdown menghitung
+  // opsinya dari data yang sudah dipersempit oleh filter LAIN yang aktif
+  // (dirinya sendiri dikecualikan). Jadi kalau Supplier = "Milan" dipilih,
+  // opsi Depo/Kategori/Gudang otomatis hanya berisi nilai yang benar-benar
+  // ada di barang-barang Milan.
+  function matchesOtherFilters(r, excludeKey) {
+    if (excludeKey !== "namaBarang" && namaBarang && r.NAMA_BARANG !== namaBarang) return false;
+    if (excludeKey !== "depo" && depo && r.DEPO !== depo) return false;
+    if (excludeKey !== "supp" && supp && r.SUPP !== supp) return false;
+    if (excludeKey !== "kategori" && kategori && r.KATEGORI !== kategori) return false;
+    if (excludeKey !== "gudang" && gudang && r.GUDANG !== gudang) return false;
+    return true;
+  }
+
   const options = useMemo(
     () => ({
-      depo: uniqueSorted(rows.map((r) => r.DEPO)),
-      supp: uniqueSorted(rows.map((r) => r.SUPP)),
-      kategori: uniqueSorted(rows.map((r) => r.KATEGORI)),
-      gudang: uniqueSorted(rows.map((r) => r.GUDANG)),
+      namaBarang: uniqueSorted(
+        pageRowsAll.filter((r) => matchesOtherFilters(r, "namaBarang")).map((r) => r.NAMA_BARANG)
+      ),
+      depo: uniqueSorted(pageRowsAll.filter((r) => matchesOtherFilters(r, "depo")).map((r) => r.DEPO)),
+      supp: uniqueSorted(pageRowsAll.filter((r) => matchesOtherFilters(r, "supp")).map((r) => r.SUPP)),
+      kategori: uniqueSorted(pageRowsAll.filter((r) => matchesOtherFilters(r, "kategori")).map((r) => r.KATEGORI)),
+      gudang: uniqueSorted(pageRowsAll.filter((r) => matchesOtherFilters(r, "gudang")).map((r) => r.GUDANG)),
     }),
-    [rows]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [pageRowsAll, namaBarang, depo, supp, kategori, gudang]
   );
 
   const filteredByPanel = useMemo(() => {
     // filters excluding depo (used to compute per-depo health bars & qty chart honoring other filters)
-    const q = search.trim().toLowerCase();
-    return rows.filter((r) => {
+    return pageRowsAll.filter((r) => {
+      if (namaBarang && r.NAMA_BARANG !== namaBarang) return false;
       if (supp && r.SUPP !== supp) return false;
       if (kategori && r.KATEGORI !== kategori) return false;
       if (gudang && r.GUDANG !== gudang) return false;
-      if (promo && r.BARANG_PROMO !== promo) return false;
-      if (q && !`${r.NAMA_BARANG} ${r.KODE_BARANG}`.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [rows, search, supp, kategori, gudang, promo]);
+  }, [pageRowsAll, namaBarang, supp, kategori, gudang]);
 
   const filtered = useMemo(() => {
     if (!depo) return filteredByPanel;
@@ -136,6 +256,13 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
   const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
   const pageClamped = Math.min(page, totalPages);
   const pageRows = sorted.slice((pageClamped - 1) * PAGE_SIZE, pageClamped * PAGE_SIZE);
+
+  useEffect(() => {
+    if (tableWrapRef.current) {
+      const h = tableWrapRef.current.offsetHeight;
+      setTableMinHeight((prev) => Math.max(prev, h));
+    }
+  }, [pageRows.length, pageClamped]);
 
   const stats = useMemo(() => {
     const acc = { totalQty: 0, fast: 0, slow: 0, dead: 0, unknown: 0, promo: 0 };
@@ -184,12 +311,11 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
   }
 
   function resetFilters() {
-    setSearch("");
+    setNamaBarang("");
     setDepo("");
     setSupp("");
     setKategori("");
     setGudang("");
-    setPromo("");
     setPage(1);
   }
 
@@ -230,7 +356,7 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
 
     XLSX.writeFile(
       workbook,
-      `update-stok${asOfDate ? "-" + asOfDate : ""}.xlsx`
+      `update-stok${activePage !== "semua" ? "-" + activePage : ""}${asOfDate ? "-" + asOfDate : ""}.xlsx`
     );
   }
 
@@ -304,7 +430,13 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
   const qtyColIndex = columns.findIndex((c) => c.key === "QTY");
 
   function exportPdf() {
-    exportStockToPdf({ rows: sorted, columns, asOfDate, stats });
+    exportStockToPdf({
+      rows: sorted,
+      columns,
+      asOfDate,
+      stats,
+      pageTitle: activePage !== "semua" ? currentPageMeta.label : null,
+    });
   }
 
   function handlePrint() {
@@ -312,10 +444,33 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--bg)]">
-      <TopBar asOfDate={asOfDate} generatedAt={generatedAt} onExportExcel={exportExcel} onExportPdf={exportPdf} onPrint={handlePrint} />
+    <div className="min-h-screen bg-[var(--bg)] lg:flex">
+      <Sidebar
+        pages={PAGES}
+        counts={pageCounts}
+        activePage={activePage}
+        onSelect={selectPage}
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
 
-      <main className="px-4 sm:px-6 py-6 flex flex-col gap-5 max-w-[1600px] mx-auto">
+      <div className="flex-1 min-w-0">
+        <TopBar
+          asOfDate={asOfDate}
+          generatedAt={generatedAt}
+          onExportExcel={exportExcel}
+          onExportPdf={exportPdf}
+          onPrint={handlePrint}
+          onMenuClick={() => setSidebarOpen(true)}
+        />
+
+        <main className="px-4 sm:px-6 py-6 flex flex-col gap-5 max-w-[1600px] mx-auto">
+        {/* Judul page yang sedang aktif */}
+        <div>
+          <h2 className="text-lg sm:text-xl font-extrabold text-[var(--ink)]">{currentPageMeta.label}</h2>
+          <p className="text-xs text-[var(--muted)] mt-0.5">{currentPageMeta.description}</p>
+        </div>
+
         {/* Stat cards */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           <StatCard label="Total SKU" value={formatQty(filtered.length)} icon={Package} accentColor="var(--blue)" />
@@ -341,8 +496,8 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
           <div className="print:hidden">
             <FilterBar
               options={options}
-              search={search}
-              setSearch={(v) => { setSearch(v); setPage(1); }}
+              namaBarang={namaBarang}
+              setNamaBarang={(v) => { setNamaBarang(v); setPage(1); }}
               depo={depo}
               setDepo={(v) => { setDepo(v); setPage(1); }}
               supp={supp}
@@ -351,8 +506,6 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
               setKategori={(v) => { setKategori(v); setPage(1); }}
               gudang={gudang}
               setGudang={(v) => { setGudang(v); setPage(1); }}
-              promo={promo}
-              setPromo={(v) => { setPromo(v); setPage(1); }}
               onReset={resetFilters}
             />
           </div>
@@ -366,7 +519,8 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
             />
           </div>
 
-          <div className="overflow-x-auto print:hidden">
+          <div ref={tableWrapRef} className="overflow-x-auto print:hidden" style={{ minHeight: tableMinHeight || undefined }}>
+
             <table className="w-full text-sm border-collapse">
               <thead>
                 <tr className="bg-[var(--bg)] border-b border-[var(--border)]">
@@ -530,7 +684,8 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
             <ArrowUp size={14} /> Kembali ke Atas
           </button>
         </footer>
-      </main>
+        </main>
+      </div>
 
       <ScrollToTopButton />
     </div>

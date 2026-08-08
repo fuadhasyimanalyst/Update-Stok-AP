@@ -1,10 +1,15 @@
 "use client";
 
+import { useRef } from "react";
+import ChartExportButtons from "./ChartExportButtons";
+
 function formatQty(n) {
   return new Intl.NumberFormat("id-ID").format(n);
 }
 
 export default function QtyPerDepoChart({ data, onDepoClick, activeDepo }) {
+  const captureRef = useRef(null);
+
   if (!data.length) {
     return (
       <div className="card px-5 py-6 text-sm text-[var(--muted)]">
@@ -17,7 +22,7 @@ export default function QtyPerDepoChart({ data, onDepoClick, activeDepo }) {
   const grandTotal = data.reduce((sum, d) => sum + d.qty, 0);
 
   return (
-    <div className="card px-5 py-4">
+    <div ref={captureRef} className="card px-5 py-4">
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
         <div>
           <h2 className="font-[family-name:var(--font-display)] text-sm font-bold uppercase tracking-wider text-[var(--ink)]">
@@ -27,9 +32,12 @@ export default function QtyPerDepoChart({ data, onDepoClick, activeDepo }) {
             Perbandingan total unit stok di setiap depo
           </p>
         </div>
-        <span className="text-[11px] font-semibold text-[var(--blue)] tabular">
-          Total: {formatQty(grandTotal)} unit
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-semibold text-[var(--blue)] tabular">
+            Total: {formatQty(grandTotal)} unit
+          </span>
+          <ChartExportButtons targetRef={captureRef} filename="grafik-qty-per-depo" />
+        </div>
       </div>
 
       <div className="flex items-end gap-3 sm:gap-5 h-48 px-1">

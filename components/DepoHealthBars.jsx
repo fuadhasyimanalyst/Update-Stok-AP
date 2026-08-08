@@ -1,5 +1,8 @@
 "use client";
 
+import { useRef } from "react";
+import ChartExportButtons from "./ChartExportButtons";
+
 function Segment({ pct, count, color, textColor, title }) {
   if (pct <= 0) return null;
   const showLabel = pct >= 8;
@@ -22,6 +25,8 @@ function Segment({ pct, count, color, textColor, title }) {
 }
 
 export default function DepoHealthBars({ depoStats, onDepoClick, activeDepo }) {
+  const captureRef = useRef(null);
+
   if (!depoStats.length) {
     return (
       <div className="card px-5 py-6 text-sm text-[var(--muted)]">
@@ -31,16 +36,19 @@ export default function DepoHealthBars({ depoStats, onDepoClick, activeDepo }) {
   }
 
   return (
-    <div className="card px-5 py-4">
+    <div ref={captureRef} className="card px-5 py-4">
       <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
         <h2 className="font-[family-name:var(--font-display)] text-sm font-bold uppercase tracking-wider text-[var(--ink)]">
           Kesehatan Stok per Depo
         </h2>
-        <div className="flex items-center gap-3 text-[11px] text-[var(--muted)] flex-wrap">
-          <LegendDot color="var(--fast)" label="Fast" />
-          <LegendDot color="var(--slow)" label="Slow" />
-          <LegendDot color="var(--dead)" label="Dead" />
-          <LegendDot color="var(--neutral-fg)" label="Belum Dikategorikan" />
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-3 text-[11px] text-[var(--muted)] flex-wrap">
+            <LegendDot color="var(--fast)" label="Fast" />
+            <LegendDot color="var(--slow)" label="Slow" />
+            <LegendDot color="var(--dead)" label="Dead" />
+            <LegendDot color="var(--neutral-fg)" label="Belum Dikategorikan" />
+          </div>
+          <ChartExportButtons targetRef={captureRef} filename="grafik-kesehatan-stok-per-depo" />
         </div>
       </div>
       <div className="flex flex-col gap-2.5">
