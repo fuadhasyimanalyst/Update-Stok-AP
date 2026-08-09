@@ -15,7 +15,6 @@ import {
   LayoutGrid,
   Sparkles,
   Ban,
-  HelpCircle,
 } from "lucide-react";
 import StatCard from "./StatCard";
 import CategoryBadge, { CATEGORY_STYLES } from "./CategoryBadge";
@@ -55,20 +54,9 @@ function isDiscontinuedSupplier(row) {
   return DISCONTINUED_SUPPLIERS.some((kw) => text.includes(kw));
 }
 
-function isBelumMasukMaster(row) {
-  // MASUK_MASTER dihitung di lib/processStock.js: "TIDAK" berarti nama barang ini
-  // sama sekali belum pernah tercatat di master KATEGORI_BARANG.xlsx (di depo manapun) —
-  // benar-benar barang baru. Kombinasi depo+barang yang cuma "belum lengkap" (barangnya
-  // sudah dikenal, cuma di depo lain) TIDAK dianggap belum masuk master.
-  return row.MASUK_MASTER === "TIDAK";
-}
-
 // Setiap barang jatuh ke SATU kategori page saja (urutan prioritas di bawah),
 // supaya tidak ada barang yang dobel tampil di 2 page berbeda.
-// "Barang Baru di Stok" dicek paling awal supaya barang baru yang masternya
-// belum lengkap langsung ketahuan, bukan malah nyasar tampil normal di page lain.
 function classifyRow(row) {
-  if (isBelumMasukMaster(row)) return "belummaster";
   if (isDiscontinuedSupplier(row)) return "nonaktif";
   if (isAccessory(row)) return "aksesoris";
   return row.BARANG_PROMO === "YA" ? "promo" : "nonpromo";
@@ -95,12 +83,6 @@ const PAGES = [
     description: "Sisa stok dari supplier yang sudah tidak bermitra lagi (mis. Pacific).",
     icon: Ban,
   },
-  {
-    id: "belummaster",
-    label: "Barang Baru di Stok",
-    description: "Barang yang namanya benar-benar baru, belum pernah tercatat di master KATEGORI_BARANG.",
-    icon: HelpCircle,
-  },
 ];
 
 const ALL_COLUMNS = [
@@ -114,7 +96,6 @@ const ALL_COLUMNS = [
   { key: "SATUAN", label: "Satuan" },
   { key: "KATEGORI", label: "Kategori" },
   { key: "BARANG_PROMO", label: "Promo" },
-  { key: "MASUK_MASTER", label: "Masuk Master" },
 ];
 
 function uniqueSorted(values) {
@@ -193,7 +174,7 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
   // Jumlah barang per page (dihitung dari SELURUH data, bukan hasil filter),
   // dipakai untuk badge angka di Sidebar.
   const pageCounts = useMemo(() => {
-    const counts = { semua: rows.length, promo: 0, nonpromo: 0, aksesoris: 0, nonaktif: 0, belummaster: 0 };
+    const counts = { semua: rows.length, promo: 0, nonpromo: 0, aksesoris: 0, nonaktif: 0 };
     for (const r of rows) {
       counts[classifyRow(r)] += 1;
     }
@@ -288,14 +269,13 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
   }, [pageRows.length, pageClamped]);
 
   const stats = useMemo(() => {
-    const acc = { totalQty: 0, fast: 0, slow: 0, dead: 0, promo: 0, belumMaster: 0 };
+    const acc = { totalQty: 0, fast: 0, slow: 0, dead: 0, promo: 0 };
     for (const r of filtered) {
       acc.totalQty += r.QTY;
       if (r.KATEGORI === "Fast Moving") acc.fast += 1;
       else if (r.KATEGORI === "DEAD") acc.dead += 1;
       else acc.slow += 1; // Slow Moving, dan fallback barang yang belum ada di master kategori
       if (r.BARANG_PROMO === "YA") acc.promo += 1;
-      if (r.MASUK_MASTER === "TIDAK") acc.belumMaster += 1;
     }
     return acc;
   }, [filtered]);
@@ -444,16 +424,6 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
             )}
           </td>
         );
-      case "MASUK_MASTER":
-        return (
-          <td key={col.key} className="px-3 py-2 whitespace-nowrap">
-            {r.MASUK_MASTER === "TIDAK" ? (
-              <span className="text-[var(--dead)] font-semibold text-xs">● BARU</span>
-            ) : (
-              <span className="text-[var(--muted)] text-xs">—</span>
-            )}
-          </td>
-        );
       default:
         return <td key={col.key} className="px-3 py-2 whitespace-nowrap">{r[col.key]}</td>;
     }
@@ -504,14 +474,13 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
         </div>
 
         {/* Stat cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           <StatCard label="Total SKU" value={formatQty(filtered.length)} icon={Package} accentColor="var(--blue)" />
           <StatCard label="Total Qty" value={formatQty(stats.totalQty)} icon={Layers} accentColor="var(--ink)" />
           <StatCard label="Fast Moving" value={formatQty(stats.fast)} icon={Zap} accentColor="var(--fast)" />
           <StatCard label="Slow Moving" value={formatQty(stats.slow)} icon={Clock} accentColor="var(--slow)" />
           <StatCard label="Dead Stock" value={formatQty(stats.dead)} icon={AlertTriangle} accentColor="var(--dead)" />
           <StatCard label="Barang Promo" value={formatQty(stats.promo)} icon={Tag} accentColor="var(--violet)" />
-          <StatCard label="Barang Baru di Stok" value={formatQty(stats.belumMaster)} icon={HelpCircle} accentColor="var(--dead)" />
         </div>
 
         {/* Qty per Depo bar chart */}
