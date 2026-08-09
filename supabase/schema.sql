@@ -16,6 +16,7 @@ create table if not exists public.stok (
   supp text,
   kategori text,
   barang_promo text,
+  masuk_master text,
   created_at timestamptz not null default now()
 );
 

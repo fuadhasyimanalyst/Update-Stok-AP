@@ -82,6 +82,7 @@ async function main() {
     supp: r.SUPP,
     kategori: r.KATEGORI,
     barang_promo: r.BARANG_PROMO,
+    masuk_master: r.MASUK_MASTER,
   }));
 
   const CHUNK = 500;

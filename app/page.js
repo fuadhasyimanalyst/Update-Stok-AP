@@ -52,6 +52,7 @@ async function getStokData() {
     SUPP: r.supp,
     KATEGORI: r.kategori,
     BARANG_PROMO: r.barang_promo,
+    MASUK_MASTER: r.masuk_master,
   }));
 
   return {
