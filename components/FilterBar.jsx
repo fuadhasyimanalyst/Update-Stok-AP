@@ -19,7 +19,7 @@ export default function FilterBar({
 }) {
   return (
     <div className="px-4 sm:px-5 py-4 border-b border-[var(--border)] bg-[var(--bg)]">
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 items-end">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 items-end">
         <SearchableSelect
           label="Supplier"
           icon={<Truck size={12} />}

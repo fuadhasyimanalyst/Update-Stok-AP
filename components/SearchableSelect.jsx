@@ -61,7 +61,7 @@ export default function SearchableSelect({ label, icon, value, onChange, options
         </button>
 
         {open && (
-          <div className="absolute z-30 mt-1 w-full min-w-[260px] rounded-lg border border-[var(--border)] bg-[var(--surface)] shadow-lg overflow-hidden">
+          <div className="absolute z-30 mt-1 w-[max(100%,260px)] max-w-[calc(100vw-2rem)] rounded-lg border border-[var(--border)] bg-[var(--surface)] shadow-lg overflow-hidden">
             <div className="relative border-b border-[var(--border)]">
               <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
               <input
