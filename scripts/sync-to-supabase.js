@@ -101,6 +101,30 @@ async function main() {
   if (metaErr) throw metaErr;
 
   console.log(`[sync] Selesai! Data per tanggal: ${asOfDate || '(tidak terdeteksi)'}`);
+
+  // Opsional: minta Vercel hapus cache halaman "/" sekarang juga, supaya sales
+  // langsung lihat data terbaru tanpa menunggu revalidate=3600 (1 jam) habis
+  // sendiri. Kalau SITE_URL / REVALIDATE_SECRET tidak diset di .env.local,
+  // langkah ini dilewati saja (cache tetap akan expire otomatis setelah 1 jam).
+  const siteUrl = process.env.SITE_URL;
+  const revalidateSecret = process.env.REVALIDATE_SECRET;
+  if (siteUrl && revalidateSecret) {
+    try {
+      const res = await fetch(
+        `${siteUrl.replace(/\/$/, '')}/api/revalidate?secret=${encodeURIComponent(revalidateSecret)}`,
+        { method: 'POST' }
+      );
+      if (res.ok) {
+        console.log('[sync] Cache halaman berhasil diperbarui (revalidate on-demand).');
+      } else {
+        console.warn(`[sync] Gagal memanggil endpoint revalidate (status ${res.status}), cache akan expire sendiri dalam 1 jam.`);
+      }
+    } catch (err) {
+      console.warn(`[sync] Tidak bisa memanggil endpoint revalidate (${err.message}), cache akan expire sendiri dalam 1 jam.`);
+    }
+  } else {
+    console.log('[sync] SITE_URL/REVALIDATE_SECRET belum diset — cache akan expire otomatis dalam 1 jam (lihat app/page.js).');
+  }
 }
 
 main().catch((err) => {

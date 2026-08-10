@@ -1,8 +1,20 @@
 import Dashboard from "@/components/Dashboard";
 import { createClient } from "@supabase/supabase-js";
 
-// Selalu ambil data terbaru dari Supabase, jangan di-cache statis oleh Next.js
-export const revalidate = 0;
+// Cache halaman selama 4 jam (14.400 detik).
+//
+// Disesuaikan dengan jadwal sync manual: 08:00, 12:00, 16:00 — jarak antar
+// sync konsisten 4 jam, jadi data memang tidak berubah dalam rentang itu.
+// Tidak perlu cache lebih pendek dari ini, karena Supabase tetap akan diakses
+// ulang padahal isinya belum berubah sama sekali.
+//
+// Angka 4 jam ini hanya JARING PENGAMAN (fallback) — begitu Anda menjalankan
+// `npm run sync-to-supabase`, endpoint /api/revalidate (lihat file itu untuk
+// cara mengaktifkannya lewat SITE_URL & REVALIDATE_SECRET di .env.local) akan
+// langsung menghapus cache saat itu juga, jadi sales tetap lihat data baru
+// dalam hitungan detik setelah tiap sync jam 08:00/12:00/16:00 — bukan
+// menunggu sampai 4 jam berikutnya.
+export const revalidate = 14400;
 
 async function getStokData() {
   const supabase = createClient(
@@ -20,7 +32,9 @@ async function getStokData() {
   while (true) {
     const { data, error } = await supabase
       .from("stok")
-      .select("*")
+      .select(
+        "id, kode_barang, nama_barang, satuan, qty, gudang, depo, cgrpdesc, supp, kategori, barang_promo, masuk_master"
+      )
       .order("nama_barang", { ascending: true })
       .range(from, from + PAGE_SIZE - 1);
 
