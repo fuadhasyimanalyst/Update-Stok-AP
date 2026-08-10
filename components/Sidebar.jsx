@@ -105,9 +105,9 @@ export default function Sidebar({ pages, counts, activePage, onSelect, isOpen, o
             onClick={toggleCollapsed}
             aria-label={collapsed ? "Tampilkan sidebar" : "Sembunyikan sidebar"}
             title={collapsed ? "Tampilkan sidebar" : "Sembunyikan sidebar"}
-            className="shrink-0 flex items-center justify-center p-1.5 rounded-lg text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--accent-soft)] transition-colors"
+            className="shrink-0 flex items-center justify-center w-7 h-7 rounded-lg border border-[var(--border)] bg-[var(--bg)] text-[var(--muted)] hover:text-[var(--accent)] hover:border-[var(--accent)] transition-colors"
           >
-            {collapsed ? <ChevronsRight size={16} /> : <ChevronsLeft size={16} />}
+            {collapsed ? <ChevronsRight size={15} /> : <ChevronsLeft size={15} />}
           </button>
         </div>
         <NavList pages={pages} counts={counts} activePage={activePage} onSelect={onSelect} collapsed={collapsed} />

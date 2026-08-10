@@ -172,6 +172,26 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
     });
   }
 
+  function persistColumns(next) {
+    try {
+      window.localStorage.setItem(COLUMN_STORAGE_KEY, JSON.stringify(Array.from(next)));
+    } catch {
+      // abaikan kalau localStorage penuh/diblokir
+    }
+  }
+
+  function showAllColumns() {
+    const next = new Set(ALL_COLUMNS.map((c) => c.key));
+    setVisibleColumns(next);
+    persistColumns(next);
+  }
+
+  function hideAllColumns() {
+    const next = new Set([LOCKED_COLUMN]);
+    setVisibleColumns(next);
+    persistColumns(next);
+  }
+
   // Jumlah barang per page (dihitung dari SELURUH data, bukan hasil filter),
   // dipakai untuk badge angka di Sidebar.
   const pageCounts = useMemo(() => {
@@ -526,6 +546,8 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
               visible={visibleColumns}
               onToggle={toggleColumn}
               lockedKey={LOCKED_COLUMN}
+              onShowAll={showAllColumns}
+              onHideAll={hideAllColumns}
             />
           </div>
 

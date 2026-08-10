@@ -9,7 +9,7 @@ import { Columns3 } from "lucide-react";
  * Kolom pertama (biasanya "Nama Barang") sengaja dikunci selalu tampil
  * supaya user tidak bisa menyembunyikan semua kolom sekaligus.
  */
-export default function ColumnPicker({ allColumns, visible, onToggle, lockedKey }) {
+export default function ColumnPicker({ allColumns, visible, onToggle, lockedKey, onShowAll, onHideAll }) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef(null);
 
@@ -20,6 +20,8 @@ export default function ColumnPicker({ allColumns, visible, onToggle, lockedKey 
     document.addEventListener("mousedown", onClickOutside);
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, []);
+
+  const allVisible = allColumns.every((col) => visible.has(col.key));
 
   return (
     <div ref={wrapRef} className="relative">
@@ -35,6 +37,23 @@ export default function ColumnPicker({ allColumns, visible, onToggle, lockedKey 
         <div className="absolute right-0 z-30 mt-1.5 w-56 rounded-lg border border-[var(--border)] bg-[var(--surface)] shadow-lg overflow-hidden">
           <div className="px-3 py-2 border-b border-[var(--border)] text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
             Tampilkan Kolom
+          </div>
+          <div className="flex items-center gap-2 px-3 py-1.5 border-b border-[var(--border)]">
+            <button
+              type="button"
+              onClick={onShowAll}
+              disabled={allVisible}
+              className="flex-1 text-[11px] font-semibold py-1 rounded-md border border-[var(--border)] text-[var(--accent)] hover:bg-[var(--accent-soft)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Tampilkan Semua
+            </button>
+            <button
+              type="button"
+              onClick={onHideAll}
+              className="flex-1 text-[11px] font-semibold py-1 rounded-md border border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--accent-soft)] transition-colors"
+            >
+              Sembunyikan Semua
+            </button>
           </div>
           <ul className="max-h-72 overflow-y-auto py-1">
             {allColumns.map((col) => {
