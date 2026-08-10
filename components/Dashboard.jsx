@@ -57,9 +57,15 @@ function isDiscontinuedSupplier(row) {
 
 // Setiap barang jatuh ke SATU kategori page saja (urutan prioritas di bawah),
 // supaya tidak ada barang yang dobel tampil di 2 page berbeda.
+// Pengecualian: aksesoris dari supplier DCOTA sengaja TIDAK masuk page
+// "Aksesoris", tapi langsung dianggap Barang Non Promo.
 function classifyRow(row) {
   if (isDiscontinuedSupplier(row)) return "nonaktif";
-  if (isAccessory(row)) return "aksesoris";
+  if (isAccessory(row)) {
+    const supp = (row.SUPP || "").toUpperCase();
+    if (supp === "DCOTA") return "nonpromo";
+    return "aksesoris";
+  }
   return row.BARANG_PROMO === "YA" ? "promo" : "nonpromo";
 }
 
