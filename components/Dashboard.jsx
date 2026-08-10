@@ -15,6 +15,7 @@ import {
   LayoutGrid,
   Sparkles,
   Ban,
+  Download,
 } from "lucide-react";
 import StatCard from "./StatCard";
 import CategoryBadge, { CATEGORY_STYLES } from "./CategoryBadge";
@@ -512,7 +513,14 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
             />
           </div>
 
-          <div className="flex justify-end px-4 sm:px-5 py-3 border-b border-[var(--border)] print:hidden">
+          <div className="flex items-center justify-between gap-2 px-4 sm:px-5 py-3 border-b border-[var(--border)] print:hidden">
+            <button
+              type="button"
+              onClick={exportExcel}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold border border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)] hover:border-[var(--ink-300,#b5b5bd)] transition-colors"
+            >
+              <Download size={14} /> <span className="hidden sm:inline">Download</span>
+            </button>
             <ColumnPicker
               allColumns={ALL_COLUMNS}
               visible={visibleColumns}
@@ -523,7 +531,7 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
 
           <div ref={tableWrapRef} className="overflow-x-auto print:hidden" style={{ minHeight: tableMinHeight || undefined }}>
 
-            <table className="w-full text-sm border-collapse">
+            <table className="text-sm border-collapse" style={{ width: "auto", minWidth: columns.length >= 6 ? "100%" : undefined }}>
               <thead>
                 <tr className="bg-[var(--bg)] border-b border-[var(--border)]">
                   {columns.map((col) => (
@@ -594,7 +602,7 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
           {/* Tabel khusus cetak/PDF-browser: menampilkan SEMUA barang hasil filter
               (bukan cuma 1 halaman), supaya hasil print/simpan-sebagai-PDF lengkap. */}
           <div className="hidden print:block overflow-visible">
-            <table className="w-full text-[10px] border-collapse">
+            <table className="text-[10px] border-collapse" style={{ width: "auto", minWidth: columns.length >= 6 ? "100%" : undefined }}>
               <thead>
                 <tr className="border-b-2 border-black">
                   {columns.map((col) => (

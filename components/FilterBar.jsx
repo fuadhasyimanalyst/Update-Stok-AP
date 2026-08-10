@@ -21,28 +21,20 @@ export default function FilterBar({
     <div className="px-4 sm:px-5 py-4 border-b border-[var(--border)] bg-[var(--bg)]">
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 items-end">
         <SearchableSelect
-          label="Nama Barang"
-          icon={<Search size={12} />}
-          value={namaBarang}
-          onChange={setNamaBarang}
-          options={options.namaBarang}
-          placeholder="Semua Barang"
-        />
-        <SearchableSelect
-          label="Depo"
-          icon={<Building2 size={12} />}
-          value={depo}
-          onChange={setDepo}
-          options={options.depo}
-          placeholder="Semua Depo"
-        />
-        <SearchableSelect
           label="Supplier"
           icon={<Truck size={12} />}
           value={supp}
           onChange={setSupp}
           options={options.supp}
           placeholder="Semua Supplier"
+        />
+        <SearchableSelect
+          label="Nama Barang"
+          icon={<Search size={12} />}
+          value={namaBarang}
+          onChange={setNamaBarang}
+          options={options.namaBarang}
+          placeholder="Semua Barang"
         />
         <SearchableSelect
           label="Kategori"
@@ -52,6 +44,14 @@ export default function FilterBar({
           options={options.kategori}
           placeholder="Semua Kategori"
           labelMap={{ DEAD: "Dead Stock" }}
+        />
+        <SearchableSelect
+          label="Depo"
+          icon={<Building2 size={12} />}
+          value={depo}
+          onChange={setDepo}
+          options={options.depo}
+          placeholder="Semua Depo"
         />
         <SearchableSelect
           label="Gudang"

@@ -90,26 +90,27 @@ export default function Sidebar({ pages, counts, activePage, onSelect, isOpen, o
           collapsed ? "w-16" : "w-60"
         }`}
       >
-        <div className="px-4 py-4 border-b border-[var(--border)] flex items-center justify-center">
+        <div
+          className={`px-3 py-3 border-b border-[var(--border)] flex items-center gap-2 ${
+            collapsed ? "justify-center" : "justify-between"
+          }`}
+        >
           {!collapsed && (
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] flex-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
               Kategori Stok
             </span>
           )}
-        </div>
-        <NavList pages={pages} counts={counts} activePage={activePage} onSelect={onSelect} collapsed={collapsed} />
-        <div className="border-t border-[var(--border)] p-2">
           <button
             type="button"
             onClick={toggleCollapsed}
             aria-label={collapsed ? "Tampilkan sidebar" : "Sembunyikan sidebar"}
             title={collapsed ? "Tampilkan sidebar" : "Sembunyikan sidebar"}
-            className="w-full flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-xs font-semibold text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--accent-soft)] transition-colors"
+            className="shrink-0 flex items-center justify-center p-1.5 rounded-lg text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--accent-soft)] transition-colors"
           >
             {collapsed ? <ChevronsRight size={16} /> : <ChevronsLeft size={16} />}
-            {!collapsed && "Sembunyikan"}
           </button>
         </div>
+        <NavList pages={pages} counts={counts} activePage={activePage} onSelect={onSelect} collapsed={collapsed} />
       </aside>
 
       {/* --- Mobile/tablet: drawer overlay --- */}
