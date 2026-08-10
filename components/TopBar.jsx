@@ -1,9 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Download, Printer, ChevronDown, FileSpreadsheet, FileText, Menu } from "lucide-react";
+import { Download, Printer, ChevronDown, FileSpreadsheet, FileText, Menu, RefreshCw } from "lucide-react";
 import ThemeToggle from "./ThemeToggle";
+
+const HARI_ID = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
 
 function formatSyncTime(generatedAt) {
   if (!generatedAt) return null;
@@ -12,10 +15,33 @@ function formatSyncTime(generatedAt) {
   return d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
 }
 
+// asOfDate formatnya "DD-MM-YYYY" (mis. "10-08-2026") -> tambahkan nama hari
+// di depannya jadi "Senin, 10-08-2026".
+function formatAsOfDateWithDay(asOfDate) {
+  if (!asOfDate) return null;
+  const match = String(asOfDate).match(/^(\d{2})-(\d{2})-(\d{4})$/);
+  if (!match) return asOfDate;
+  const [, dd, mm, yyyy] = match;
+  const d = new Date(Number(yyyy), Number(mm) - 1, Number(dd));
+  if (Number.isNaN(d.getTime())) return asOfDate;
+  return `${HARI_ID[d.getDay()]}, ${asOfDate}`;
+}
+
 export default function TopBar({ asOfDate, generatedAt, onExportExcel, onExportPdf, onPrint, onMenuClick }) {
   const syncTime = formatSyncTime(generatedAt);
   const [exportOpen, setExportOpen] = useState(false);
   const wrapRef = useRef(null);
+  const router = useRouter();
+  const [isRefreshing, startRefresh] = useTransition();
+
+  function handleRefresh() {
+    // router.refresh() menjalankan ulang Server Component (app/page.js) yang
+    // mengambil data langsung dari Supabase, jadi data di layar ikut ter-update
+    // tanpa perlu reload penuh halaman.
+    startRefresh(() => {
+      router.refresh();
+    });
+  }
 
   useEffect(() => {
     function onClickOutside(e) {
@@ -48,15 +74,30 @@ export default function TopBar({ asOfDate, generatedAt, onExportExcel, onExportP
           <h1 className="text-base sm:text-xl font-extrabold tracking-tight text-[var(--ink)]">
             Update Stok
           </h1>
-          <p className="text-[11px] sm:text-xs text-[var(--muted)] font-medium mt-0.5 leading-snug">
-            Fast / Slow Moving &amp; Dead Stock &middot; Data per: {asOfDate || "—"}
-            {syncTime ? ` · Update jam ${syncTime}` : ""}
+          <p className="text-[11px] sm:text-xs font-semibold mt-0.5 leading-snug">
+            <span className="text-[var(--muted)] font-medium">Fast / Slow Moving &amp; Dead Stock &middot; </span>
+            <span className="text-emerald-600 dark:text-emerald-400">
+              Data per: {formatAsOfDateWithDay(asOfDate) || "—"}
+              {syncTime ? ` · Update jam ${syncTime}` : ""}
+            </span>
           </p>
         </div>
       </div>
 
       <div className="flex items-center gap-2 flex-wrap justify-end w-full sm:w-auto print:hidden">
         <ThemeToggle />
+
+        <button
+          type="button"
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          aria-label="Refresh data dari Supabase"
+          title="Ambil ulang data terbaru dari Supabase"
+          className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold border border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)] hover:border-[var(--ink-300,#b5b5bd)] transition-colors disabled:opacity-60 disabled:cursor-wait"
+        >
+          <RefreshCw size={14} className={isRefreshing ? "animate-spin" : ""} />
+          <span className="hidden sm:inline">{isRefreshing ? "Refreshing…" : "Refresh"}</span>
+        </button>
 
         <button
           onClick={onPrint}
