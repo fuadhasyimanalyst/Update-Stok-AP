@@ -503,7 +503,7 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
         {/* Stat cards */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           <StatCard label="Total SKU" value={formatQty(filtered.length)} icon={Package} accentColor="var(--blue)" />
-          <StatCard label="Total Qty" value={formatQty(stats.totalQty)} icon={Layers} accentColor="var(--ink)" />
+          <StatCard label="Total Qty" value={formatQty(stats.totalQty)} sub="PCS" icon={Layers} accentColor="var(--ink)" />
           <StatCard label="Fast Moving" value={formatQty(stats.fast)} icon={Zap} accentColor="var(--fast)" />
           <StatCard label="Slow Moving" value={formatQty(stats.slow)} icon={Clock} accentColor="var(--slow)" />
           <StatCard label="Dead Stock" value={formatQty(stats.dead)} icon={AlertTriangle} accentColor="var(--dead)" />
