@@ -121,7 +121,7 @@ function categoryColor(value) {
 export default function Dashboard({ rows, asOfDate, generatedAt }) {
   const [activePage, setActivePage] = useState("nonpromo");
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [namaBarang, setNamaBarang] = useState("");
+  const [namaBarang, setNamaBarang] = useState([]);
   const [depo, setDepo] = useState("");
   const [supp, setSupp] = useState("");
   const [kategori, setKategori] = useState("");
@@ -216,7 +216,7 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
 
   function selectPage(id) {
     setActivePage(id);
-    setNamaBarang("");
+    setNamaBarang([]);
     setDepo("");
     setSupp("");
     setKategori("");
@@ -230,7 +230,7 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
   // opsi Depo/Kategori/Gudang otomatis hanya berisi nilai yang benar-benar
   // ada di barang-barang Milan.
   function matchesOtherFilters(r, excludeKey) {
-    if (excludeKey !== "namaBarang" && namaBarang && r.NAMA_BARANG !== namaBarang) return false;
+    if (excludeKey !== "namaBarang" && namaBarang.length > 0 && !namaBarang.includes(r.NAMA_BARANG)) return false;
     if (excludeKey !== "depo" && depo && r.DEPO !== depo) return false;
     if (excludeKey !== "supp" && supp && r.SUPP !== supp) return false;
     if (excludeKey !== "kategori" && kategori && r.KATEGORI !== kategori) return false;
@@ -255,7 +255,7 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
   const filteredByPanel = useMemo(() => {
     // filters excluding depo (used to compute per-depo health bars & qty chart honoring other filters)
     return pageRowsAll.filter((r) => {
-      if (namaBarang && r.NAMA_BARANG !== namaBarang) return false;
+      if (namaBarang.length > 0 && !namaBarang.includes(r.NAMA_BARANG)) return false;
       if (supp && r.SUPP !== supp) return false;
       if (kategori && r.KATEGORI !== kategori) return false;
       if (gudang && r.GUDANG !== gudang) return false;
@@ -340,7 +340,7 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
   }
 
   function resetFilters() {
-    setNamaBarang("");
+    setNamaBarang([]);
     setDepo("");
     setSupp("");
     setKategori("");
