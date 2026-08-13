@@ -34,7 +34,7 @@ export default function QtyPerDepoChart({ data, onDepoClick, activeDepo }) {
         </div>
         <div className="flex items-center gap-2">
           <span className="text-[11px] font-semibold text-[var(--blue)] tabular">
-            Total: {formatQty(grandTotal)} unit
+            Total: {formatQty(grandTotal)} pcs
           </span>
           <ChartExportButtons targetRef={captureRef} filename="grafik-qty-per-depo" />
         </div>
@@ -49,14 +49,14 @@ export default function QtyPerDepoChart({ data, onDepoClick, activeDepo }) {
               key={d.depo}
               onClick={() => onDepoClick(isActive ? "" : d.depo)}
               className="group flex-1 min-w-0 flex flex-col items-center justify-end h-full gap-1.5"
-              title={`${d.depo}: ${formatQty(d.qty)}`}
+              title={`${d.depo}: ${formatQty(d.qty)} pcs`}
             >
               <span
                 className={`text-[10px] sm:text-[11px] font-semibold tabular whitespace-nowrap transition-colors ${
                   isActive ? "text-[var(--blue)]" : "text-[var(--muted)] group-hover:text-[var(--blue)]"
                 }`}
               >
-                {formatQty(d.qty)}
+                {formatQty(d.qty)} pcs
               </span>
               <div className="w-full flex-1 flex items-end">
                 <div
