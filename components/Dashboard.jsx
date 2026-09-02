@@ -30,6 +30,11 @@ import { exportStockToPdf } from "@/lib/exportPdf";
 
 const PAGE_SIZE = 50;
 const COLUMN_STORAGE_KEY = "update-stok-visible-columns";
+// Menyimpan daftar SEMUA kolom yang dikenal saat terakhir user menyimpan
+// preferensinya -> dipakai untuk mendeteksi kolom BARU yang ditambahkan lewat
+// update kode (mis. HARGA_JUAL), supaya kolom baru otomatis tetap tampil
+// walau user pernah menyembunyikan sebagian kolom lain sebelumnya.
+const COLUMN_KNOWN_KEY = "update-stok-known-columns";
 const LOCKED_COLUMN = "NAMA_BARANG"; // kolom ini selalu tampil, tidak bisa disembunyikan
 
 // Kata kunci nama barang yang dianggap "Aksesoris" (aksesoris panjang/pendek,
@@ -103,6 +108,8 @@ const ALL_COLUMNS = [
   { key: "SATUAN", label: "Satuan" },
   { key: "KATEGORI", label: "Kategori" },
   { key: "BARANG_PROMO", label: "Promo" },
+  { key: "NSTDPRICE", label: "Harga Standar", numeric: true },
+  { key: "HARGA_JUAL", label: "Harga Jual (+PPN 11%)", numeric: true },
 ];
 
 function uniqueSorted(values) {
@@ -111,6 +118,14 @@ function uniqueSorted(values) {
 
 function formatQty(n) {
   return new Intl.NumberFormat("id-ID").format(n);
+}
+
+function formatRupiah(n) {
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    maximumFractionDigits: 0,
+  }).format(n || 0);
 }
 
 function categoryColor(value) {
@@ -152,12 +167,28 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(COLUMN_STORAGE_KEY);
+      const rawKnown = window.localStorage.getItem(COLUMN_KNOWN_KEY);
+      const allKeys = ALL_COLUMNS.map((c) => c.key);
+
       if (raw) {
         const saved = JSON.parse(raw);
+        const knownBefore = rawKnown ? JSON.parse(rawKnown) : null;
+
         if (Array.isArray(saved) && saved.length > 0) {
-          setVisibleColumns(new Set(saved));
+          // Kolom yang belum pernah "dikenal" user (baru ditambahkan lewat update
+          // kode setelah preferensi terakhir disimpan) -> otomatis ikut ditampilkan,
+          // supaya fitur baru tidak "hilang" hanya karena localStorage lama.
+          const newlyAddedKeys = Array.isArray(knownBefore)
+            ? allKeys.filter((k) => !knownBefore.includes(k))
+            : [];
+          const merged = new Set([...saved, ...newlyAddedKeys]);
+          setVisibleColumns(merged);
+          persistColumns(merged);
         }
       }
+
+      // Catat daftar kolom yang dikenal saat ini, untuk deteksi kolom baru berikutnya.
+      window.localStorage.setItem(COLUMN_KNOWN_KEY, JSON.stringify(allKeys));
     } catch {
       // abaikan kalau localStorage tidak bisa dibaca
     }
@@ -356,6 +387,7 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
       columns.map((c) => {
         if (c.key === "KATEGORI") return r.KATEGORI === "DEAD" ? "Dead Stock" : r.KATEGORI;
         if (c.key === "BARANG_PROMO") return r.BARANG_PROMO === "YA" ? "Promo" : "Non Promo";
+        if (c.key === "NSTDPRICE" || c.key === "HARGA_JUAL") return Number(r[c.key] || 0);
         return r[c.key];
       })
     );
@@ -449,6 +481,18 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
             ) : (
               <span className="text-[var(--muted)] text-xs">—</span>
             )}
+          </td>
+        );
+      case "NSTDPRICE":
+        return (
+          <td key={col.key} className="px-3 py-2 text-right font-[family-name:var(--font-mono)] tabular whitespace-nowrap">
+            {formatRupiah(r.NSTDPRICE)}
+          </td>
+        );
+      case "HARGA_JUAL":
+        return (
+          <td key={col.key} className="px-3 py-2 text-right font-[family-name:var(--font-mono)] tabular whitespace-nowrap font-semibold">
+            {formatRupiah(r.HARGA_JUAL)}
           </td>
         );
       default:

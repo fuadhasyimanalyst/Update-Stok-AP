@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Download, Printer, ChevronDown, FileSpreadsheet, FileText, Menu, RefreshCw } from "lucide-react";
+import { Download, Printer, ChevronDown, FileSpreadsheet, FileText, Menu, RefreshCw, LogOut } from "lucide-react";
 import ThemeToggle from "./ThemeToggle";
 
 const HARI_ID = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
@@ -33,6 +33,7 @@ export default function TopBar({ asOfDate, generatedAt, onExportExcel, onExportP
   const wrapRef = useRef(null);
   const router = useRouter();
   const [isRefreshing, startRefresh] = useTransition();
+  const [loggingOut, setLoggingOut] = useState(false);
 
   function handleRefresh() {
     // router.refresh() menjalankan ulang Server Component (app/page.js) yang
@@ -41,6 +42,16 @@ export default function TopBar({ asOfDate, generatedAt, onExportExcel, onExportP
     startRefresh(() => {
       router.refresh();
     });
+  }
+
+  async function handleLogout() {
+    setLoggingOut(true);
+    try {
+      await fetch("/api/logout", { method: "POST" });
+    } finally {
+      router.replace("/login");
+      router.refresh();
+    }
   }
 
   useEffect(() => {
@@ -138,6 +149,18 @@ export default function TopBar({ asOfDate, generatedAt, onExportExcel, onExportP
             </div>
           )}
         </div>
+
+        <button
+          type="button"
+          onClick={handleLogout}
+          disabled={loggingOut}
+          aria-label="Keluar"
+          title="Keluar dari dashboard"
+          className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold border border-[var(--border)] text-[var(--muted)] hover:text-red-600 hover:border-red-300 transition-colors disabled:opacity-60"
+        >
+          <LogOut size={14} />
+          <span className="hidden sm:inline">{loggingOut ? "Keluar…" : "Keluar"}</span>
+        </button>
       </div>
     </header>
   );

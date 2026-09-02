@@ -83,6 +83,8 @@ async function main() {
     kategori: r.KATEGORI,
     barang_promo: r.BARANG_PROMO,
     masuk_master: r.MASUK_MASTER,
+    nstdprice: r.NSTDPRICE,
+    harga_jual: r.HARGA_JUAL,
   }));
 
   const CHUNK = 500;
