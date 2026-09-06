@@ -109,7 +109,6 @@ const ALL_COLUMNS = [
   { key: "SATUAN", label: "Satuan" },
   { key: "KATEGORI", label: "Kategori" },
   { key: "BARANG_PROMO", label: "Promo" },
-  { key: "NSTDPRICE", label: "Harga Standar (ERP)", numeric: true },
   { key: "HARGA_JUAL", label: "Harga Jual (Daftar Harga +PPN 11%)", numeric: true },
   { key: "HARGA_SUMBER", label: "Sumber Harga" },
   { key: "NILAI_STOK", label: "Nilai Stok (Qty × Harga Jual)", numeric: true },
@@ -404,7 +403,7 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
       columns.map((c) => {
         if (c.key === "KATEGORI") return r.KATEGORI === "DEAD" ? "Dead Stock" : r.KATEGORI;
         if (c.key === "BARANG_PROMO") return r.BARANG_PROMO === "YA" ? "Promo" : "Non Promo";
-        if (c.key === "NSTDPRICE" || c.key === "HARGA_JUAL" || c.key === "NILAI_STOK") return Number(r[c.key] || 0);
+        if (c.key === "HARGA_JUAL" || c.key === "NILAI_STOK") return Number(r[c.key] || 0);
         return r[c.key];
       })
     );
@@ -498,12 +497,6 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
             ) : (
               <span className="text-[var(--muted)] text-xs">—</span>
             )}
-          </td>
-        );
-      case "NSTDPRICE":
-        return (
-          <td key={col.key} className="px-3 py-2 text-right font-[family-name:var(--font-mono)] tabular whitespace-nowrap">
-            {formatRupiah(r.NSTDPRICE)}
           </td>
         );
       case "HARGA_JUAL":
