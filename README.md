@@ -100,9 +100,44 @@ Supabase (lihat bagian di bawah) dan keluarkan `raw-data/` serta
    repo GitHub ini.
 3. Framework preset otomatis terdeteksi sebagai **Next.js** — tidak perlu
    ubah setting apa pun (build command `npm run build`, output otomatis).
-4. Klik **Deploy**. Selesai — setiap kali Anda push perubahan
+4. Di **Project Settings > Environment Variables**, tambahkan minimal:
+   `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
+   `SUPABASE_SERVICE_ROLE_KEY` (kalau sync dijalankan dari CI), serta 3
+   variabel login di bawah (`DASHBOARD_USERNAME`, `DASHBOARD_PASSWORD`,
+   `SESSION_SECRET`) — **wajib** supaya halaman login berfungsi.
+5. Klik **Deploy**. Selesai — setiap kali Anda push perubahan
    `SaldoStock.xls` ke GitHub, Vercel akan build ulang otomatis dan
    dashboard ter-update.
+
+## Login (data rahasia, tidak boleh publik)
+
+Seluruh halaman dashboard diproteksi middleware (`middleware.js`) — siapa pun
+yang belum login akan otomatis diarahkan ke `/login`. Satu username/password
+dipakai bersama oleh tim (tidak ada akun per-orang), diset lewat 3 env var:
+
+```
+DASHBOARD_USERNAME=admin
+DASHBOARD_PASSWORD=<password Anda>
+SESSION_SECRET=<string acak panjang, jangan ditebak>
+```
+
+Generate `SESSION_SECRET` yang aman dengan:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+Set ketiganya di **dua tempat**:
+1. `.env.local` (untuk dijalankan/dites lokal via `npm run dev`)
+2. **Vercel > Project Settings > Environment Variables** (untuk production)
+
+Kalau `SESSION_SECRET` diganti nanti (mis. dicurigai bocor), semua orang yang
+sedang login otomatis "keluar" sendiri (cookie lama jadi tidak valid lagi) —
+ini fitur, bukan bug, kalau memang itu tujuannya.
+
+Session login berlaku 7 hari sejak login (tersimpan di cookie browser),
+setelah itu diminta login ulang. Tombol **Keluar** ada di pojok kanan atas
+dashboard untuk logout manual kapan saja.
 
 ## Rencana migrasi ke Supabase
 

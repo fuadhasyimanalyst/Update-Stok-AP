@@ -38,6 +38,7 @@ function main() {
   const supplierPath = path.join(RAW_DIR, 'SUPPLIER.xlsx');
   const kategoriPath = path.join(RAW_DIR, 'KATEGORI_BARANG.xlsx');
   const saldoPath = path.join(RAW_DIR, 'SaldoStock.xls');
+  const hargaPath = path.join(RAW_DIR, 'DAFTAR_HARGA.xlsx');
 
   for (const p of [supplierPath, kategoriPath, saldoPath]) {
     if (!fs.existsSync(p)) {
@@ -55,11 +56,30 @@ function main() {
   console.log('[convert-data] Membaca SaldoStock.xls ...');
   const saldoRows = readSheet(saldoPath);
 
+  // DAFTAR_HARGA.xlsx = master harga jual (opsional tapi sangat disarankan).
+  // Kalau file ini tidak ada, harga jual fallback ke nstdprice*1.11 seperti versi lama.
+  let hargaListRows = [];
+  if (fs.existsSync(hargaPath)) {
+    console.log('[convert-data] Membaca DAFTAR_HARGA.xlsx ...');
+    hargaListRows = readSheet(hargaPath);
+  } else {
+    console.warn(
+      `[convert-data] PERINGATAN: ${hargaPath} tidak ditemukan. Harga jual akan fallback ke nstdprice*1.11 (SaldoStock) untuk SEMUA barang.`
+    );
+  }
+
   console.log(
-    `[convert-data] Ditemukan: ${supplierRows.length} supplier, ${kategoriRows.length} baris kategori, ${saldoRows.length} baris saldo stok`
+    `[convert-data] Ditemukan: ${supplierRows.length} supplier, ${kategoriRows.length} baris kategori, ${saldoRows.length} baris saldo stok, ${hargaListRows.length} baris daftar harga`
   );
 
-  const result = processStock(saldoRows, supplierRows, kategoriRows);
+  const result = processStock(saldoRows, supplierRows, kategoriRows, hargaListRows);
+
+  const jumlahFallback = result.rows.filter((r) => r.HARGA_SUMBER === 'FALLBACK_ERP').length;
+  if (jumlahFallback > 0) {
+    console.warn(
+      `[convert-data] PERHATIAN: ${jumlahFallback} baris tidak ketemu namanya di DAFTAR_HARGA.xlsx, harga jualnya fallback ke nstdprice*1.11 (SaldoStock).`
+    );
+  }
 
   if (!fs.existsSync(OUT_DIR)) fs.mkdirSync(OUT_DIR, { recursive: true });
   const outPath = path.join(OUT_DIR, 'processed.json');

@@ -35,6 +35,7 @@ export default function FilterBar({
           onChange={setNamaBarang}
           options={options.namaBarang}
           placeholder="Semua Barang"
+          multiple
         />
         <SearchableSelect
           label="Kategori"

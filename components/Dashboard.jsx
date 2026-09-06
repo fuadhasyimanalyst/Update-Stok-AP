@@ -21,6 +21,7 @@ import StatCard from "./StatCard";
 import CategoryBadge, { CATEGORY_STYLES } from "./CategoryBadge";
 import DepoHealthBars from "./DepoHealthBars";
 import QtyPerDepoChart from "./QtyPerDepoChart";
+import NilaiPerDepoChart from "./NilaiPerDepoChart";
 import FilterBar from "./FilterBar";
 import TopBar from "./TopBar";
 import Sidebar from "./Sidebar";
@@ -30,6 +31,11 @@ import { exportStockToPdf } from "@/lib/exportPdf";
 
 const PAGE_SIZE = 50;
 const COLUMN_STORAGE_KEY = "update-stok-visible-columns";
+// Menyimpan daftar SEMUA kolom yang dikenal saat terakhir user menyimpan
+// preferensinya -> dipakai untuk mendeteksi kolom BARU yang ditambahkan lewat
+// update kode (mis. HARGA_JUAL), supaya kolom baru otomatis tetap tampil
+// walau user pernah menyembunyikan sebagian kolom lain sebelumnya.
+const COLUMN_KNOWN_KEY = "update-stok-known-columns";
 const LOCKED_COLUMN = "NAMA_BARANG"; // kolom ini selalu tampil, tidak bisa disembunyikan
 
 // Kata kunci nama barang yang dianggap "Aksesoris" (aksesoris panjang/pendek,
@@ -103,6 +109,10 @@ const ALL_COLUMNS = [
   { key: "SATUAN", label: "Satuan" },
   { key: "KATEGORI", label: "Kategori" },
   { key: "BARANG_PROMO", label: "Promo" },
+  { key: "NSTDPRICE", label: "Harga Standar (ERP)", numeric: true },
+  { key: "HARGA_JUAL", label: "Harga Jual (Daftar Harga +PPN 11%)", numeric: true },
+  { key: "HARGA_SUMBER", label: "Sumber Harga" },
+  { key: "NILAI_STOK", label: "Nilai Stok (Qty × Harga Jual)", numeric: true },
 ];
 
 function uniqueSorted(values) {
@@ -113,6 +123,14 @@ function formatQty(n) {
   return new Intl.NumberFormat("id-ID").format(n);
 }
 
+function formatRupiah(n) {
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    maximumFractionDigits: 0,
+  }).format(n || 0);
+}
+
 function categoryColor(value) {
   const style = CATEGORY_STYLES[value] || CATEGORY_STYLES["Slow Moving"];
   return style.fg;
@@ -121,7 +139,7 @@ function categoryColor(value) {
 export default function Dashboard({ rows, asOfDate, generatedAt }) {
   const [activePage, setActivePage] = useState("nonpromo");
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [namaBarang, setNamaBarang] = useState("");
+  const [namaBarang, setNamaBarang] = useState([]);
   const [depo, setDepo] = useState("");
   const [supp, setSupp] = useState("");
   const [kategori, setKategori] = useState("");
@@ -152,12 +170,28 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(COLUMN_STORAGE_KEY);
+      const rawKnown = window.localStorage.getItem(COLUMN_KNOWN_KEY);
+      const allKeys = ALL_COLUMNS.map((c) => c.key);
+
       if (raw) {
         const saved = JSON.parse(raw);
+        const knownBefore = rawKnown ? JSON.parse(rawKnown) : null;
+
         if (Array.isArray(saved) && saved.length > 0) {
-          setVisibleColumns(new Set(saved));
+          // Kolom yang belum pernah "dikenal" user (baru ditambahkan lewat update
+          // kode setelah preferensi terakhir disimpan) -> otomatis ikut ditampilkan,
+          // supaya fitur baru tidak "hilang" hanya karena localStorage lama.
+          const newlyAddedKeys = Array.isArray(knownBefore)
+            ? allKeys.filter((k) => !knownBefore.includes(k))
+            : [];
+          const merged = new Set([...saved, ...newlyAddedKeys]);
+          setVisibleColumns(merged);
+          persistColumns(merged);
         }
       }
+
+      // Catat daftar kolom yang dikenal saat ini, untuk deteksi kolom baru berikutnya.
+      window.localStorage.setItem(COLUMN_KNOWN_KEY, JSON.stringify(allKeys));
     } catch {
       // abaikan kalau localStorage tidak bisa dibaca
     }
@@ -216,7 +250,7 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
 
   function selectPage(id) {
     setActivePage(id);
-    setNamaBarang("");
+    setNamaBarang([]);
     setDepo("");
     setSupp("");
     setKategori("");
@@ -230,7 +264,7 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
   // opsi Depo/Kategori/Gudang otomatis hanya berisi nilai yang benar-benar
   // ada di barang-barang Milan.
   function matchesOtherFilters(r, excludeKey) {
-    if (excludeKey !== "namaBarang" && namaBarang && r.NAMA_BARANG !== namaBarang) return false;
+    if (excludeKey !== "namaBarang" && namaBarang.length > 0 && !namaBarang.includes(r.NAMA_BARANG)) return false;
     if (excludeKey !== "depo" && depo && r.DEPO !== depo) return false;
     if (excludeKey !== "supp" && supp && r.SUPP !== supp) return false;
     if (excludeKey !== "kategori" && kategori && r.KATEGORI !== kategori) return false;
@@ -255,7 +289,7 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
   const filteredByPanel = useMemo(() => {
     // filters excluding depo (used to compute per-depo health bars & qty chart honoring other filters)
     return pageRowsAll.filter((r) => {
-      if (namaBarang && r.NAMA_BARANG !== namaBarang) return false;
+      if (namaBarang.length > 0 && !namaBarang.includes(r.NAMA_BARANG)) return false;
       if (supp && r.SUPP !== supp) return false;
       if (kategori && r.KATEGORI !== kategori) return false;
       if (gudang && r.GUDANG !== gudang) return false;
@@ -329,6 +363,20 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
       .sort((a, b) => b.qty - a.qty);
   }, [filteredByPanel]);
 
+  // Nilai stok (QTY x HARGA_JUAL, harga dari DAFTAR_HARGA.xlsx + PPN 11%) per depo.
+  // Ini yang dipakai untuk melihat depo mana yang "overstock" dari sisi nilai rupiah,
+  // bukan cuma jumlah unit — depo bisa saja qty-nya sedang-sedang saja tapi nilainya
+  // besar karena barangnya mahal, atau sebaliknya.
+  const depoNilai = useMemo(() => {
+    const map = new Map();
+    for (const r of filteredByPanel) {
+      map.set(r.DEPO, (map.get(r.DEPO) || 0) + (r.NILAI_STOK || 0));
+    }
+    return Array.from(map.entries())
+      .map(([depoName, nilai]) => ({ depo: depoName, nilai }))
+      .sort((a, b) => b.nilai - a.nilai);
+  }, [filteredByPanel]);
+
   function toggleSort(key) {
     if (sortKey === key) {
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -340,7 +388,7 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
   }
 
   function resetFilters() {
-    setNamaBarang("");
+    setNamaBarang([]);
     setDepo("");
     setSupp("");
     setKategori("");
@@ -356,6 +404,7 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
       columns.map((c) => {
         if (c.key === "KATEGORI") return r.KATEGORI === "DEAD" ? "Dead Stock" : r.KATEGORI;
         if (c.key === "BARANG_PROMO") return r.BARANG_PROMO === "YA" ? "Promo" : "Non Promo";
+        if (c.key === "NSTDPRICE" || c.key === "HARGA_JUAL" || c.key === "NILAI_STOK") return Number(r[c.key] || 0);
         return r[c.key];
       })
     );
@@ -451,6 +500,41 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
             )}
           </td>
         );
+      case "NSTDPRICE":
+        return (
+          <td key={col.key} className="px-3 py-2 text-right font-[family-name:var(--font-mono)] tabular whitespace-nowrap">
+            {formatRupiah(r.NSTDPRICE)}
+          </td>
+        );
+      case "HARGA_JUAL":
+        return (
+          <td key={col.key} className="px-3 py-2 text-right font-[family-name:var(--font-mono)] tabular whitespace-nowrap font-semibold">
+            {formatRupiah(r.HARGA_JUAL)}
+          </td>
+        );
+      case "HARGA_SUMBER":
+        return (
+          <td key={col.key} className="px-3 py-2 whitespace-nowrap">
+            {r.HARGA_SUMBER === "FALLBACK_ERP" ? (
+              <span
+                className="text-[10px] font-semibold uppercase tracking-wide text-[var(--dead)]"
+                title="Nama barang ini belum ada di DAFTAR_HARGA.xlsx, harga jual fallback ke harga standar ERP"
+              >
+                Fallback ERP
+              </span>
+            ) : (
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">
+                Daftar Harga
+              </span>
+            )}
+          </td>
+        );
+      case "NILAI_STOK":
+        return (
+          <td key={col.key} className="px-3 py-2 text-right font-[family-name:var(--font-mono)] tabular whitespace-nowrap font-semibold text-[var(--blue)]">
+            {formatRupiah(r.NILAI_STOK)}
+          </td>
+        );
       default:
         return <td key={col.key} className="px-3 py-2 whitespace-nowrap">{r[col.key]}</td>;
     }
@@ -502,17 +586,22 @@ export default function Dashboard({ rows, asOfDate, generatedAt }) {
 
         {/* Stat cards */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          <StatCard label="Total SKU" value={formatQty(filtered.length)} icon={Package} accentColor="var(--blue)" />
-          <StatCard label="Total Qty" value={formatQty(stats.totalQty)} icon={Layers} accentColor="var(--ink)" />
-          <StatCard label="Fast Moving" value={formatQty(stats.fast)} icon={Zap} accentColor="var(--fast)" />
-          <StatCard label="Slow Moving" value={formatQty(stats.slow)} icon={Clock} accentColor="var(--slow)" />
-          <StatCard label="Dead Stock" value={formatQty(stats.dead)} icon={AlertTriangle} accentColor="var(--dead)" />
-          <StatCard label="Barang Promo" value={formatQty(stats.promo)} icon={Tag} accentColor="var(--violet)" />
+          <StatCard label="Total SKU" value={formatQty(filtered.length)} sub="SKU" icon={Package} accentColor="var(--blue)" />
+          <StatCard label="Fast Moving" value={formatQty(stats.fast)} sub="SKU" icon={Zap} accentColor="var(--fast)" />
+          <StatCard label="Slow Moving" value={formatQty(stats.slow)} sub="SKU" icon={Clock} accentColor="var(--slow)" />
+          <StatCard label="Dead Stock" value={formatQty(stats.dead)} sub="SKU" icon={AlertTriangle} accentColor="var(--dead)" />
+          <StatCard label="Total Qty" value={formatQty(stats.totalQty)} sub="PCS" icon={Layers} accentColor="var(--ink)" />
+          <StatCard label="Barang Promo" value={formatQty(stats.promo)} sub="SKU" icon={Tag} accentColor="var(--violet)" />
         </div>
 
         {/* Qty per Depo bar chart */}
         <div className="print:hidden">
           <QtyPerDepoChart data={depoQty} onDepoClick={setDepo} activeDepo={depo} />
+        </div>
+
+        {/* Nilai Stok (Qty x Harga Jual) per Depo bar chart — untuk lihat depo mana yang overstock */}
+        <div className="print:hidden">
+          <NilaiPerDepoChart data={depoNilai} onDepoClick={setDepo} activeDepo={depo} />
         </div>
 
         {/* Signature health bars */}

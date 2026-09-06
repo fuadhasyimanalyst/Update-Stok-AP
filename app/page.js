@@ -33,9 +33,15 @@ async function getStokData() {
     const { data, error } = await supabase
       .from("stok")
       .select(
-        "id, kode_barang, nama_barang, satuan, qty, gudang, depo, cgrpdesc, supp, kategori, barang_promo, masuk_master"
+        "id, kode_barang, nama_barang, satuan, qty, gudang, depo, cgrpdesc, supp, kategori, barang_promo, masuk_master, nstdprice, harga_jual, harga_sumber, nilai_stok"
       )
+      // Tiebreaker "id" WAJIB ada di samping "nama_barang": banyak barang punya
+      // nama sama persis (beda gudang/depo), dan Postgres tidak menjamin urutan
+      // yang stabil untuk nilai kembar di antara beberapa request .range() yang
+      // terpisah. Tanpa tiebreaker unik, baris yang sama bisa ikut "kebawa" ke
+      // dua halaman sekaligus -> id dobel -> React key dobel di tabel.
       .order("nama_barang", { ascending: true })
+      .order("id", { ascending: true })
       .range(from, from + PAGE_SIZE - 1);
 
     if (error) {
@@ -47,6 +53,16 @@ async function getStokData() {
     if (data.length < PAGE_SIZE) break; // halaman terakhir
     from += PAGE_SIZE;
   }
+
+  // Jaring pengaman tambahan: buang duplikat id kalau ada (mis. dari sync yang
+  // sempat berjalan dobel/tumpang tindih), supaya React key tetap unik apa pun
+  // penyebabnya.
+  const seenIds = new Set();
+  rows = rows.filter((r) => {
+    if (seenIds.has(r.id)) return false;
+    seenIds.add(r.id);
+    return true;
+  });
 
   const { data: meta } = await supabase
     .from("stok_meta")
@@ -67,6 +83,10 @@ async function getStokData() {
     KATEGORI: r.kategori,
     BARANG_PROMO: r.barang_promo,
     MASUK_MASTER: r.masuk_master,
+    NSTDPRICE: Number(r.nstdprice) || 0,
+    HARGA_JUAL: Number(r.harga_jual) || 0,
+    HARGA_SUMBER: r.harga_sumber,
+    NILAI_STOK: Number(r.nilai_stok) || 0,
   }));
 
   return {

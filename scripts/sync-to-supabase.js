@@ -51,6 +51,7 @@ async function main() {
   const supplierPath = path.join(RAW_DIR, 'SUPPLIER.xlsx');
   const kategoriPath = path.join(RAW_DIR, 'KATEGORI_BARANG.xlsx');
   const saldoPath = path.join(RAW_DIR, 'SaldoStock.xls');
+  const hargaPath = path.join(RAW_DIR, 'DAFTAR_HARGA.xlsx');
 
   for (const p of [supplierPath, kategoriPath, saldoPath]) {
     if (!fs.existsSync(p)) {
@@ -64,8 +65,25 @@ async function main() {
   const kategoriRows = readSheet(kategoriPath);
   const saldoRows = readSheet(saldoPath);
 
-  const { rows, asOfDate, generatedAt } = processStock(saldoRows, supplierRows, kategoriRows);
+  // DAFTAR_HARGA.xlsx = master harga jual. Kalau belum ada, fallback ke nstdprice*1.11.
+  let hargaListRows = [];
+  if (fs.existsSync(hargaPath)) {
+    hargaListRows = readSheet(hargaPath);
+  } else {
+    console.warn(
+      `[sync] PERINGATAN: ${hargaPath} tidak ditemukan. Harga jual akan fallback ke nstdprice*1.11 untuk SEMUA barang.`
+    );
+  }
+
+  const { rows, asOfDate, generatedAt } = processStock(saldoRows, supplierRows, kategoriRows, hargaListRows);
   console.log(`[sync] ${rows.length} baris siap dikirim ke Supabase (data per ${asOfDate || '?'})`);
+
+  const jumlahFallback = rows.filter((r) => r.HARGA_SUMBER === 'FALLBACK_ERP').length;
+  if (jumlahFallback > 0) {
+    console.warn(
+      `[sync] PERHATIAN: ${jumlahFallback} baris tidak ketemu namanya di DAFTAR_HARGA.xlsx, harga jualnya fallback ke nstdprice*1.11.`
+    );
+  }
 
   console.log('[sync] Mengosongkan tabel stok lama...');
   const { error: delErr } = await supabase.from('stok').delete().gte('id', 0);
@@ -83,6 +101,10 @@ async function main() {
     kategori: r.KATEGORI,
     barang_promo: r.BARANG_PROMO,
     masuk_master: r.MASUK_MASTER,
+    nstdprice: r.NSTDPRICE,
+    harga_jual: r.HARGA_JUAL,
+    harga_sumber: r.HARGA_SUMBER,
+    nilai_stok: r.NILAI_STOK,
   }));
 
   const CHUNK = 500;

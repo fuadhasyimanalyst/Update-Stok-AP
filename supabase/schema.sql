@@ -17,6 +17,10 @@ create table if not exists public.stok (
   kategori text,
   barang_promo text,
   masuk_master text,
+  nstdprice numeric,
+  harga_jual numeric,
+  harga_sumber text,
+  nilai_stok numeric,
   created_at timestamptz not null default now()
 );
 
